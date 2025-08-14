@@ -1,0 +1,166 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-container {
+    position: static !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  
+  .print\:p-0 {
+    padding: 0 !important;
+  }
+  
+  .print\:mb-4 {
+    margin-bottom: 1rem !important;
+  }
+  
+  .print\:pt-4 {
+    padding-top: 1rem !important;
+  }
+  
+  .print\:mt-4 {
+    margin-top: 1rem !important;
+  }
+  
+  /* Ensure text is readable in print */
+  * {
+    color: black !important;
+    background: white !important;
+  }
+  
+  /* Remove shadows and borders for cleaner print */
+  .shadow-xl,
+  .shadow-lg,
+  .shadow-md,
+  .shadow-sm,
+  .shadow {
+    box-shadow: none !important;
+  }
+  
+  /* Ensure tables print properly */
+  table {
+    border-collapse: collapse !important;
+  }
+  
+  th, td {
+    border: 1px solid #000 !important;
+    padding: 8px !important;
+  }
+  
+  /* Page breaks */
+  .page-break {
+    page-break-before: always;
+  }
+  
+  .avoid-break {
+    page-break-inside: avoid;
+  }
+}
+
+/* PDF generation styles */
+.pdf-content {
+  background: white;
+  color: black;
+  font-family: 'Arial', sans-serif;
+  line-height: 1.4;
+}
+
+.pdf-content h1,
+.pdf-content h2,
+.pdf-content h3 {
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.pdf-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.pdf-content th,
+.pdf-content td {
+  border: 1px solid #d1d5db;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.pdf-content th {
+  background-color: #f9fafb;
+  font-weight: bold;
+}
+
+/* Loading spinner for PDF generation */
+.pdf-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdf-loading .spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+html {
+  height: 100%;
+  transition: background-color 0.2s ease-in-out;
+}
+
+body {
+  height: 100%;
+  margin: 0;
+}
+
+#root {
+  height: 100%;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
+}
+
+/* Smooth transitions */
+* {
+  @apply transition-colors duration-200;
+}
+ 

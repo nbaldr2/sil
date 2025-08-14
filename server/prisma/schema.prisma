@@ -1,0 +1,485 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+ 
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  BIOLOGIST
+  TECHNICIAN
+  SECRETARY
+}
+
+enum HL7MessageStatus {
+  RECEIVED
+  PROCESSED
+  ERROR
+  PENDING_ACK
+}
+
+model HL7Message {
+  id          String          @id @default(cuid())
+  raw         String
+  messageType String
+  sourceIp    String
+  status      HL7MessageStatus
+  error       String?
+  timestamp   DateTime        @default(now())
+  processedAt DateTime?
+}
+
+enum DoctorStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum RequestStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  VALIDATED
+  CANCELLED
+}
+
+enum ResultStatus {
+  PENDING
+  VALIDATED
+  REJECTED
+}
+
+enum OrderStatus {
+  DRAFT
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+enum StockStatus {
+  AVAILABLE
+  LOW_STOCK
+  OUT_OF_STOCK
+  EXPIRED
+}
+
+enum SampleType {
+  BLOOD
+  URINE
+  SALIVA
+  STOOL
+  SPUTUM
+  CEREBROSPINAL_FLUID
+  SYNOVIAL_FLUID
+  PLEURAL_FLUID
+  PERITONEAL_FLUID
+  OTHER
+}
+
+enum TubeType {
+  EDTA
+  CITRATE
+  HEPARIN
+  SERUM
+  PLAIN
+  FLUORIDE
+  OTHER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  requests  Request[]
+  auditLogs AuditLog[]
+  orders    Order[]
+  stockOuts StockOut[]
+  adjustments InventoryAdjustment[]
+  transfers StockTransfer[]
+}
+
+model Patient {
+  id          String   @id @default(cuid())
+  externalId  String?  @unique
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime
+  gender      String
+  phone       String?
+  email       String?
+  address     String?
+  cnssNumber  String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  requests Request[]
+  analysisResults AnalysisResult[]
+}
+
+model Doctor {
+  id          String       @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String       @unique
+  phone       String?
+  specialty   String?
+  orderNumber String?      @unique
+  status      DoctorStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  requests Request[]
+}
+
+model Backup {
+  id        String   @id @default(cuid())
+  date      DateTime @default(now())
+  filename  String
+  status    String
+  size      Int
+  createdBy String
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  timestamp DateTime @default(now())
+  userId    String
+  action    String
+  details   String
+  ipAddress String?
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Plugin {
+  id          String   @id @default(cuid())
+  name        String
+  version     String
+  description String
+  installed   Boolean  @default(false)
+  enabled     Boolean  @default(false)
+  installedAt DateTime?
+  updatedAt   DateTime?
+}
+
+model Analysis {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  category    String
+  price       Float    @default(0)
+  tva         Float    @default(20)
+  cost        Float    @default(0)
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  requestAnalyses RequestAnalysis[]
+  results         Result[]
+}
+
+model Request {
+  id              String        @id @default(cuid())
+  patientId       String
+  doctorId        String?
+  status          RequestStatus @default(PENDING)
+  priority        String        @default("NORMAL")
+  sampleType      SampleType    @default(BLOOD)
+  tubeType        TubeType?
+  collectionDate  DateTime?
+  collectionTime  String?
+  notes           String?
+  totalAmount     Float         @default(0)
+  discount        Float         @default(0)
+  advancePayment  Float         @default(0)
+  amountDue       Float         @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  createdById     String
+
+  // Relations
+  patient         Patient         @relation(fields: [patientId], references: [id])
+  doctor          Doctor?         @relation(fields: [doctorId], references: [id])
+  createdBy       User            @relation(fields: [createdById], references: [id])
+  requestAnalyses RequestAnalysis[]
+  results         Result[]
+}
+
+model RequestAnalysis {
+  id         String @id @default(cuid())
+  requestId  String
+  analysisId String
+  price      Float  @default(0)
+
+  // Relations
+  request  Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  analysis Analysis @relation(fields: [analysisId], references: [id])
+
+  @@unique([requestId, analysisId])
+}
+
+model Result {
+  id         String       @id @default(cuid())
+  requestId  String
+  analysisId String
+  value      String?
+  unit       String?
+  reference  String?
+  status     ResultStatus @default(PENDING)
+  notes      String?
+  validatedBy String?
+  validatedAt DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  // Relations
+  request  Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  analysis Analysis @relation(fields: [analysisId], references: [id])
+}
+
+model AnalysisResult {
+  id         String   @id @default(cuid())
+  patientId  String
+  result     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  patient    Patient  @relation(fields: [patientId], references: [id])
+}
+
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id            String      @id @default(cuid())
+  name          String
+  code          String      @unique
+  category      String
+  description   String?
+  unit          String      @default("pcs")
+  minStock      Int         @default(0)
+  maxStock      Int?
+  hasExpiryDate Boolean     @default(true)
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  stockEntries StockEntry[]
+  stockOuts    StockOut[]
+  transfers    StockTransfer[]
+  adjustments  InventoryAdjustment[]
+  orderItems   OrderItem[]
+}
+
+model Supplier {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  email       String?
+  phone       String?
+  address     String?
+  contactPerson String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  stockEntries StockEntry[]
+  orders       Order[]
+}
+
+model StockEntry {
+  id          String   @id @default(cuid())
+  productId   String
+  supplierId  String?
+  quantity    Int
+  lotNumber   String?
+  expiryDate  DateTime?
+  unitCost    Float    @default(0)
+  location    String   @default("Main Storage")
+  notes       String?
+  receivedBy  String?
+  receivedAt  DateTime @default(now())
+
+  // Relations
+  product  Product  @relation(fields: [productId], references: [id])
+  supplier Supplier? @relation(fields: [supplierId], references: [id])
+}
+
+model StockOut {
+  id          String   @id @default(cuid())
+  productId   String
+  quantity    Int
+  usedBy      String?
+  department  String?
+  purpose     String?
+  notes       String?
+  usedAt      DateTime @default(now())
+  userId      String?
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
+}
+
+model StockTransfer {
+  id            String   @id @default(cuid())
+  productId     String
+  fromLocation  String
+  toLocation    String
+  quantity      Int
+  transferredBy String?
+  notes         String?
+  transferredAt DateTime @default(now())
+  userId        String?
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
+}
+
+model InventoryAdjustment {
+  id          String   @id @default(cuid())
+  productId   String
+  oldQuantity Int
+  newQuantity Int
+  difference  Int
+  reason      String
+  notes       String?
+  adjustedBy  String?
+  adjustedAt  DateTime @default(now())
+  userId      String?
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  orderNumber   String        @unique
+  supplierId    String
+  status        OrderStatus   @default(DRAFT)
+  orderDate     DateTime      @default(now())
+  expectedDate  DateTime?
+  totalAmount   Float         @default(0)
+  notes         String?
+  createdBy     String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  supplier   Supplier     @relation(fields: [supplierId], references: [id])
+  user       User?        @relation(fields: [createdBy], references: [id])
+  orderItems OrderItem[]
+}
+
+model OrderItem {
+  id       String @id @default(cuid())
+  orderId  String
+  productId String
+  quantity Int
+  unitPrice Float @default(0)
+  totalPrice Float @default(0)
+
+  // Relations
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model Automate {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // e.g., Immunoassay, Hematology, Biochemistry
+  manufacturer String
+  protocol    String   // ASTM, HL7, LIS2-A2
+  connection  String   // tcp, serial, ftp
+  config      Json
+  enabled     Boolean  @default(true)
+  status      String   @default("offline") // online, offline, error
+  lastSync    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  driverCodes AutomateCodeMapping[]
+  transferLogs AutomateTransferLog[]
+  qcResults QualityControlResult[]
+}
+
+model AutomateCodeMapping {
+  id             String   @id @default(cuid())
+  automateId     String
+  codeAutomate   String
+  silTestName    String
+  sampleType     String
+  unit           String?
+  refRangeLow    Float?
+  refRangeHigh   Float?
+  createdAt      DateTime @default(now())
+
+  // Relations
+  automate Automate @relation(fields: [automateId], references: [id], onDelete: Cascade)
+}
+
+model AutomateTransferLog {
+  id          String   @id @default(cuid())
+  automateId  String
+  type        String   // 'result' | 'worklist'
+  status      String   // success | failed
+  duration    Int?     // in ms
+  errorMsg    String?
+  timestamp   DateTime @default(now())
+
+  // Relations
+  automate Automate @relation(fields: [automateId], references: [id], onDelete: Cascade)
+}
+
+model QualityControlResult {
+  id          String   @id @default(cuid())
+  automateId  String
+  testName    String
+  level       String   // Low, Normal, High
+  value       Float
+  expected    Float
+  deviation   Float
+  status      String   // pass, fail, warning
+  timestamp   DateTime @default(now())
+
+  // Relations
+  automate Automate @relation(fields: [automateId], references: [id], onDelete: Cascade)
+}
