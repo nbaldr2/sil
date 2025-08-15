@@ -51,6 +51,16 @@ A comprehensive laboratory management system built with React, TypeScript, and T
 - **Auto-Printing**: Automatic label and receipt printing
 - **Barcode Generation**: Unique sample tracking identifiers
 
+### 🛡️ Quality Control System
+- **QC Result Management**: Track quality control results for all automates
+- **Multi-level Testing**: Support for Low, Normal, and High control levels
+- **Automated Calculations**: Auto-calculation of deviation percentages and status
+- **Status Monitoring**: Pass, Warning, and Fail status tracking
+- **Statistical Analysis**: Comprehensive QC statistics and trend analysis
+- **Visual Analytics**: Charts and graphs for QC performance monitoring
+- **Real-time Alerts**: Automatic status determination based on deviation thresholds
+- **Multi-automate Support**: QC tracking across all laboratory instruments
+
 ### 🖨️ Printing System
 - **Sample Labels**: Professional labels with patient info and barcodes
 - **Payment Receipts**: Detailed receipts with pricing breakdown
@@ -156,6 +166,7 @@ npm run dev
 - **New Analysis Request**: Receptionist interface for patient registration
 - **Result Entry**: Technician interface for entering test results
 - **Analysis Validation**: Biologist interface for result validation
+- **Quality Control**: Comprehensive QC management for all automates
 - **Billing Module**: Financial management and invoicing
 - **Printing Module**: Label and report printing
 
@@ -209,6 +220,57 @@ npm run dev
 - Print dialog opens automatically
 - Formatted for standard printer output
 
+## 🛡️ Quality Control System
+
+### Overview
+The Quality Control (QC) system provides comprehensive monitoring and analysis of laboratory automate performance through systematic quality control testing and statistical analysis.
+
+### Key Features
+
+#### QC Result Management
+- **Multi-level Testing**: Support for Low, Normal, and High control levels
+- **Automated Calculations**: Auto-calculation of deviation percentages from expected values
+- **Status Determination**: Automatic pass/warning/fail status based on deviation thresholds
+- **Real-time Entry**: Quick QC result entry with validation
+- **Historical Tracking**: Complete history of all QC results
+
+#### Statistical Analysis
+- **Pass Rate Monitoring**: Real-time calculation of QC pass rates
+- **Trend Analysis**: Performance trends over configurable time periods
+- **Test Distribution**: Analysis breakdown by test type and automate
+- **Performance Metrics**: Comprehensive statistics for quality assessment
+- **Visual Analytics**: Charts and graphs for easy interpretation
+
+#### Multi-automate Support
+- **Cross-instrument Monitoring**: QC tracking across all laboratory automates
+- **Comparative Analysis**: Performance comparison between instruments
+- **Centralized Dashboard**: Unified view of all QC activities
+- **Individual Automate Views**: Detailed QC analysis per instrument
+
+### QC Status Thresholds
+- **Pass**: Deviation ≤ 5% from expected value
+- **Warning**: Deviation 5-15% from expected value  
+- **Fail**: Deviation > 15% from expected value
+
+### Access Control
+- **Admin**: Full QC management and configuration
+- **Biologist**: QC monitoring, analysis, and result validation
+- **Technician**: QC result entry and basic monitoring
+
+### QC Workflow
+1. **Sample Preparation**: Prepare control samples at different levels
+2. **Result Entry**: Enter measured values through the QC interface
+3. **Automatic Processing**: System calculates deviation and determines status
+4. **Statistical Analysis**: Review performance metrics and trends
+5. **Quality Assessment**: Monitor pass rates and identify issues
+6. **Corrective Actions**: Address failures and warnings as needed
+
+### Navigation
+Access the Quality Control system through:
+- **Sidebar Menu**: "Contrôle Qualité" / "Quality Control" (Shield icon)
+- **Direct URL**: `/quality-control`
+- **Role Requirements**: ADMIN, BIOLOGIST, or TECHNICIAN access
+
 ## 📊 Analytics & KPIs
 
 ### Financial Metrics
@@ -226,7 +288,10 @@ npm run dev
 ### Quality Metrics
 - **Accuracy Rate**: Result accuracy percentage
 - **Customer Satisfaction**: Patient satisfaction scores
-- **Error Rate**: Quality control metrics
+- **QC Pass Rate**: Quality control success percentage
+- **QC Trend Analysis**: Statistical analysis of QC performance
+- **Automate Performance**: Individual instrument quality metrics
+- **Error Rate**: Quality control failure tracking
 
 ### Patient Analytics
 - **New Patients**: First-time visitors
@@ -281,14 +346,23 @@ npm run dev
 
 ### Biologist Operations
 1. **Result Validation**: Review and validate test results
-2. **Quality Control**: Ensure accuracy and compliance
-3. **Report Generation**: Create professional reports
-4. **Printing**: Generate patient reports and labels
+2. **Quality Control**: Monitor QC results and trends across all automates
+3. **QC Analysis**: Review statistical performance and identify issues
+4. **Report Generation**: Create professional reports
+5. **Printing**: Generate patient reports and labels
+
+### Quality Control Workflow
+1. **QC Result Entry**: Enter control sample results for each automate
+2. **Automatic Calculations**: System calculates deviation and determines status
+3. **Statistical Monitoring**: View pass rates, trends, and performance metrics
+4. **Alert Management**: Monitor warnings and failures across instruments
+5. **Trend Analysis**: Analyze QC performance over time periods
+6. **Multi-automate Overview**: Compare performance across all instruments
 
 ## 🔮 Future Enhancements
 
 - **External API Integration**: Connect to external laboratory systems
-- **Advanced Analytics**: Machine learning insights
+- **Advanced QC Analytics**: Machine learning for QC trend prediction
 - **Mobile App**: Native mobile application
 - **Multi-location Support**: Multiple laboratory locations
 - **Advanced Reporting**: Custom report generation

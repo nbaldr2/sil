@@ -483,3 +483,49 @@ model QualityControlResult {
   // Relations
   automate Automate @relation(fields: [automateId], references: [id], onDelete: Cascade)
 }
+
+// Module License Management
+enum ModuleStatus {
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  TRIAL
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String
+  version     String
+  author      String   @default("SIL Lab Systems")
+  category    String   // stock, billing, analytics, etc.
+  price       Float    @default(0)
+  features    Json     // Array of features
+  requirements Json    // System requirements
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  licenses ModuleLicense[]
+}
+
+model ModuleLicense {
+  id            String       @id @default(cuid())
+  moduleId      String
+  licenseKey    String       @unique
+  organizationName String?
+  contactEmail  String?
+  status        ModuleStatus @default(TRIAL)
+  activatedAt   DateTime?
+  expiresAt     DateTime
+  maxUsers      Int          @default(1)
+  features      Json?        // Specific features enabled
+  metadata      Json?        // Additional license data
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+}

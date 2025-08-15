@@ -1,6 +1,27 @@
 version: '3.8'
 
 services:
+  app:
+    build: .
+    container_name: sil_app
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: sil_user
+      DB_PASSWORD: sil_password
+      DB_NAME: sil_lab
+    depends_on:
+      - postgres
+    networks:
+      - sil_network
+
   postgres:
     image: postgres:15
     container_name: sil_postgres
@@ -17,7 +38,6 @@ services:
     networks:
       - sil_network
 
-  # Optional: pgAdmin for database management
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: sil_pgadmin
@@ -41,4 +61,3 @@ volumes:
 networks:
   sil_network:
     driver: bridge
- 

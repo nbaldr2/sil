@@ -17,6 +17,7 @@ import PriceManagement from './components/PriceManagement';
 import UserManagement from './components/UserManagement';
 import StockDashboard from './components/StockDashboard';
 import AddStockEntryPage from './components/AddStockEntryPage';
+import CreateProductPage from './components/CreateProductPage';
 import UseStockFormPage from './components/UseStockFormPage';
 import TransferStock from './components/TransferStock';
 import AdjustInventoryPage from './components/AdjustInventoryPage';
@@ -26,6 +27,9 @@ import { PluginStore } from './components/admin/NewPluginStore';
 import { AuditTrail } from './components/admin/AuditTrail';
 import { BackupRestore } from './components/admin/BackupRestore';
 import AutomateIntegrationPanel from './components/AutomateIntegrationPanel';
+import QualityControl from './components/QualityControl';
+import ModuleStore from './components/ModuleStore';
+import { ModuleProvider } from './contexts/ModuleContext';
 import './index.css';
 import StockReport from './components/StockReport';
 
@@ -193,7 +197,8 @@ function App() {
 
   return (
     <AuthContext.Provider value={authValue}>
-      <div className={`min-h-screen ${theme === 'dark' ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
+      <ModuleProvider>
+        <div className={`min-h-screen ${theme === 'dark' ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
         {user ? (
           <div className="flex flex-col lg:flex-row h-screen overflow-hidden">
             {/* Mobile sidebar backdrop */}
@@ -226,17 +231,21 @@ function App() {
                     <Route path="/config" element={<ConfigCenter />} />
                     <Route path="/config/prices" element={<PriceManagement />} />
                     <Route path="/config/users" element={<UserManagement />} />
-                    <Route path="/config/modules" element={<PluginStore />} />
+                    <Route path="/config/modules" element={<ModuleStore />} />
                     <Route path="/config/audit" element={<AuditTrail />} />
                     <Route path="/config/backup" element={<BackupRestore />} />
 
                     {/* Automate Integration Routes */}
                     <Route path="/automates" element={<AutomateIntegrationPanel />} />
+                    
+                    {/* Quality Control Routes */}
+                    <Route path="/quality-control" element={<QualityControl />} />
 
                     {/* Stock Management Routes */}
                     <Route path="/stock" element={<Navigate to="/stock/dashboard" replace />} />
                     <Route path="/stock/dashboard" element={<StockDashboard />} />
                     <Route path="/stock/add" element={<AddStockEntryPage />} />
+                    <Route path="/stock/create-product" element={<CreateProductPage />} />
                     <Route path="/stock/use" element={<UseStockFormPage />} />
                     <Route path="/stock/transfer" element={<TransferStock onClose={() => {}} />} />
                     <Route path="/stock/adjust" element={<AdjustInventoryPage />} />
@@ -253,7 +262,8 @@ function App() {
         ) : (
           <LoginPage />
         )}
-      </div>
+        </div>
+      </ModuleProvider>
     </AuthContext.Provider>
   );
 }

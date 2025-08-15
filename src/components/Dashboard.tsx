@@ -25,6 +25,8 @@ import { useAuth } from '../App';
 import { requestsService, pricingService } from '../services/integrations';
 import { useNavigate } from 'react-router-dom';
 import { stockService } from '../services/integrations';
+import { moduleService, ModuleAccess } from '../services/moduleService';
+import { useModules } from '../contexts/ModuleContext';
 
 interface DashboardData {
   totalRequests: number;
@@ -47,7 +49,9 @@ interface DashboardData {
 
 export default function Dashboard() {
   const { language, user } = useAuth();
+  const { moduleVersion } = useModules();
   const navigate = useNavigate();
+  const [stockModuleAccess, setStockModuleAccess] = useState<ModuleAccess | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     totalRequests: 0,
     pendingRequests: 0,
@@ -201,7 +205,22 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadDashboardData();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, stockModuleAccess]); // Reload when stock module access changes
+
+  // Check stock module access when component mounts or modules change
+  useEffect(() => {
+    const checkStockModuleAccess = async () => {
+      try {
+        const access = await moduleService.checkModuleAccess('stock-manager');
+        setStockModuleAccess(access);
+      } catch (error) {
+        console.error('Error checking stock module access:', error);
+        setStockModuleAccess({ hasAccess: false, daysRemaining: 0, status: null, expiresAt: null, features: [] });
+      }
+    };
+
+    checkStockModuleAccess();
+  }, [moduleVersion]); // Refresh when moduleVersion changes
 
   const loadDashboardData = async () => {
     setIsLoading(true);
@@ -316,42 +335,44 @@ export default function Dashboard() {
         percentage: (count / totalRequests) * 100
       }));
       
-      // NEW CODE: Load stock data for expiring and low stock products
+      // Load stock data only if stock module is accessible
       let expiringProducts: { name: any; code: any; expiringStock: any; currentStock: any; expiryDate?: any; }[] = [];
       let lowStockProducts: { name: any; code: any; currentStock: any; minStock: any; }[] = [];
       
-      try {
-        // Fetch stock data using the exportStockReport function
-        const stockData = await stockService.exportStockReport();
-        
-        if (stockData && Array.isArray(stockData)) {
-          // Filter and sort products that are expiring soon (have expiringStock > 0)
-          expiringProducts = stockData
-            .filter(product => product.expiringStock > 0)
-            .sort((a, b) => b.expiringStock - a.expiringStock)
-            .slice(0, 5)  // Limit to 5 items
-            .map(product => ({
-              name: product.name,
-              code: product.code,
-              expiringStock: product.expiringStock,
-              currentStock: product.currentStock,
-              expiryDate: product.earliestExpiryDate // Store the expiry date
-            }));
+      if (stockModuleAccess?.hasAccess) {
+        try {
+          // Fetch stock data using the exportStockReport function
+          const stockData = await stockService.exportStockReport();
           
-          // Filter and sort products that are low in stock (currentStock <= minStock)
-          lowStockProducts = stockData
-            .filter(product => product.currentStock <= product.minStock && product.currentStock > 0)
-            .sort((a, b) => (a.currentStock / a.minStock) - (b.currentStock / b.minStock))
-            .slice(0, 5)  // Limit to 5 items
-            .map(product => ({
-              name: product.name,
-              code: product.code,
-              currentStock: product.currentStock,
-              minStock: product.minStock
-            }));
+          if (stockData && Array.isArray(stockData)) {
+            // Filter and sort products that are expiring soon (have expiringStock > 0)
+            expiringProducts = stockData
+              .filter(product => product.expiringStock > 0)
+              .sort((a, b) => b.expiringStock - a.expiringStock)
+              .slice(0, 5)  // Limit to 5 items
+              .map(product => ({
+                name: product.name,
+                code: product.code,
+                expiringStock: product.expiringStock,
+                currentStock: product.currentStock,
+                expiryDate: product.earliestExpiryDate // Store the expiry date
+              }));
+            
+            // Filter and sort products that are low in stock (currentStock <= minStock)
+            lowStockProducts = stockData
+              .filter(product => product.currentStock <= product.minStock && product.currentStock > 0)
+              .sort((a, b) => (a.currentStock / a.minStock) - (b.currentStock / b.minStock))
+              .slice(0, 5)  // Limit to 5 items
+              .map(product => ({
+                name: product.name,
+                code: product.code,
+                currentStock: product.currentStock,
+                minStock: product.minStock
+              }));
+          }
+        } catch (stockError) {
+          console.error('Error loading stock data:', stockError);
         }
-      } catch (stockError) {
-        console.error('Error loading stock data:', stockError);
       }
       
       setDashboardData({
@@ -530,10 +551,11 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-  {/* Stock Report Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        {/* Expiring Products */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
+  {/* Stock Report Section - Only show if stock module is accessible */}
+      {stockModuleAccess?.hasAccess && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          {/* Expiring Products */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
             <div className="flex items-center">
               <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600 mr-2" />
@@ -608,7 +630,8 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-      </div>
+        </div>
+      )}
       {/* Secondary Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sun, Moon, Globe, LogOut, Menu } from 'lucide-react';
 import { useAuth } from '../App';
+import QCNotificationBell from './QCNotificationBell';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -64,6 +65,11 @@ export default function Header({ onMenuClick }: HeaderProps) {
             </select>
           </div>
         </div>
+        
+        {/* QC Notification Bell - only show for roles that can access QC */}
+        {(user?.role === 'ADMIN' || user?.role === 'BIOLOGIST' || user?.role === 'TECHNICIAN') && (
+          <QCNotificationBell />
+        )}
         
         <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
           <span className="hidden sm:inline text-sm text-gray-700 dark:text-gray-300 truncate max-w-[100px] lg:max-w-[120px]">

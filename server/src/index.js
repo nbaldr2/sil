@@ -23,6 +23,7 @@ const configRoutes = require('./routes/config');
 const stockRoutes = require('./routes/stock');
 const pluginRoutes = require('./routes/plugins');
 const automateRoutes = require('./routes/automates');
+const moduleRoutes = require('./routes/modules');
  
 
 const app = express();
@@ -38,7 +39,11 @@ const limiter = rateLimit({
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5174',
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    process.env.CORS_ORIGIN
+  ].filter(Boolean),
   credentials: true
 }));
 app.use(morgan('combined'));
@@ -106,6 +111,7 @@ app.use('/api/config', configRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/plugins', pluginRoutes);
 app.use('/api/automates', automateRoutes);
+app.use('/api/modules', moduleRoutes);
 
 // Error Handling
 app.use((err, req, res, next) => {

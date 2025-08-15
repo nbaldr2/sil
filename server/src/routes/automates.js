@@ -21,12 +21,62 @@ const codeMappingValidation = [
   body('sampleType').isLength({ min: 1 })
 ];
 
+// Get all QC results (across all automates) - must be before parameterized routes
+router.get('/qc-results/all', async (req, res) => {
+  try {
+    const { page = 1, limit = 50, status, level, testName, automateId } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const where = {};
+    
+    if (status) where.status = status;
+    if (level) where.level = level;
+    if (testName) where.testName = { contains: testName, mode: 'insensitive' };
+    if (automateId) where.automateId = automateId;
+
+    const qcResults = await prisma.qualityControlResult.findMany({
+      where,
+      orderBy: { timestamp: 'desc' },
+      skip,
+      take: parseInt(limit),
+      include: {
+        automate: {
+          select: {
+            name: true,
+            type: true,
+            manufacturer: true
+          }
+        }
+      }
+    });
+
+    const total = await prisma.qualityControlResult.count({ where });
+
+    res.json({
+      qcResults,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching all QC results:', error);
+    res.status(500).json({ error: 'Failed to fetch QC results' });
+  }
+});
+
 // Get all automates
 router.get('/', async (req, res) => {
   try {
     const automates = await prisma.automate.findMany({
       include: {
         driverCodes: true,
+        transferLogs: {
+          orderBy: { timestamp: 'desc' },
+          take: 20
+        },
         _count: {
           select: {
             driverCodes: true,
@@ -327,6 +377,201 @@ router.patch('/:id/status', async (req, res) => {
   } catch (error) {
     console.error('Error updating automate status:', error);
     res.status(500).json({ error: 'Failed to update automate status' });
+  }
+});
+
+// Quality Control Results endpoints
+
+// Get QC results for an automate
+router.get('/:id/qc-results', async (req, res) => {
+  try {
+    const { page = 1, limit = 50, status, level, testName } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const where = { automateId: req.params.id };
+    
+    if (status) where.status = status;
+    if (level) where.level = level;
+    if (testName) where.testName = { contains: testName, mode: 'insensitive' };
+
+    const qcResults = await prisma.qualityControlResult.findMany({
+      where,
+      orderBy: { timestamp: 'desc' },
+      skip,
+      take: parseInt(limit),
+      include: {
+        automate: {
+          select: {
+            name: true,
+            type: true,
+            manufacturer: true
+          }
+        }
+      }
+    });
+
+    const total = await prisma.qualityControlResult.count({ where });
+
+    res.json({
+      qcResults,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching QC results:', error);
+    res.status(500).json({ error: 'Failed to fetch QC results' });
+  }
+});
+
+// Create QC result
+router.post('/:id/qc-results', async (req, res) => {
+  try {
+    const {
+      testName,
+      level,
+      value,
+      expected,
+      deviation,
+      status
+    } = req.body;
+
+    const qcResult = await prisma.qualityControlResult.create({
+      data: {
+        automateId: req.params.id,
+        testName,
+        level,
+        value: parseFloat(value),
+        expected: parseFloat(expected),
+        deviation: parseFloat(deviation),
+        status
+      },
+      include: {
+        automate: {
+          select: {
+            name: true,
+            type: true,
+            manufacturer: true
+          }
+        }
+      }
+    });
+
+    res.status(201).json({ qcResult });
+  } catch (error) {
+    console.error('Error creating QC result:', error);
+    res.status(500).json({ error: 'Failed to create QC result' });
+  }
+});
+
+// Update QC result
+router.put('/qc-results/:qcId', async (req, res) => {
+  try {
+    const {
+      testName,
+      level,
+      value,
+      expected,
+      deviation,
+      status
+    } = req.body;
+
+    const qcResult = await prisma.qualityControlResult.update({
+      where: { id: req.params.qcId },
+      data: {
+        testName,
+        level,
+        value: parseFloat(value),
+        expected: parseFloat(expected),
+        deviation: parseFloat(deviation),
+        status
+      },
+      include: {
+        automate: {
+          select: {
+            name: true,
+            type: true,
+            manufacturer: true
+          }
+        }
+      }
+    });
+
+    res.json({ qcResult });
+  } catch (error) {
+    console.error('Error updating QC result:', error);
+    res.status(500).json({ error: 'Failed to update QC result' });
+  }
+});
+
+// Delete QC result
+router.delete('/qc-results/:qcId', async (req, res) => {
+  try {
+    await prisma.qualityControlResult.delete({
+      where: { id: req.params.qcId }
+    });
+
+    res.json({ message: 'QC result deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting QC result:', error);
+    res.status(500).json({ error: 'Failed to delete QC result' });
+  }
+});
+
+// Get QC statistics
+router.get('/:id/qc-stats', async (req, res) => {
+  try {
+    const { days = 30 } = req.query;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+
+    const stats = await prisma.qualityControlResult.groupBy({
+      by: ['status'],
+      where: {
+        automateId: req.params.id,
+        timestamp: {
+          gte: startDate
+        }
+      },
+      _count: {
+        status: true
+      }
+    });
+
+    const totalResults = await prisma.qualityControlResult.count({
+      where: {
+        automateId: req.params.id,
+        timestamp: {
+          gte: startDate
+        }
+      }
+    });
+
+    const testStats = await prisma.qualityControlResult.groupBy({
+      by: ['testName', 'status'],
+      where: {
+        automateId: req.params.id,
+        timestamp: {
+          gte: startDate
+        }
+      },
+      _count: {
+        testName: true
+      }
+    });
+
+    res.json({
+      statusStats: stats,
+      totalResults,
+      testStats,
+      period: `${days} days`
+    });
+  } catch (error) {
+    console.error('Error fetching QC statistics:', error);
+    res.status(500).json({ error: 'Failed to fetch QC statistics' });
   }
 });
 

@@ -1,0 +1,203 @@
+{
+  "info": {
+    "name": "SIL Lab API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "5cc8e5e0-2d46-4f76-b6b7-9e94b8f5a8b1",
+    "description": "Postman collection to test SIL Lab Management System API."
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login returns token', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.token).to.be.a('string');",
+                  "  pm.environment.set('auth_token', json.token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{auth_token}}"}
+            ],
+            "url": {"raw": "{{base_url}}/api/auth/me", "host": ["{{base_url}}"], "path": ["api", "auth", "me"]}
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/api/health", "host": ["{{base_url}}"], "path": ["api", "health"]}
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Patients",
+      "event": [{
+        "listen": "prerequest",
+        "script": {"exec": [
+          "if (!pm.environment.get('auth_token')) {",
+          "  console.warn('auth_token is empty. Run Auth > Login first.');",
+          "}"
+        ], "type": "text/javascript"}
+      }],
+      "item": [
+        {
+          "name": "List Patients",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/api/patients?page=1&limit=10", "host": ["{{base_url}}"], "path": ["api","patients"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"10"}]}
+          },
+          "response": []
+        },
+        {
+          "name": "Create Patient",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{auth_token}}"}
+            ],
+            "url": {"raw": "{{base_url}}/api/patients", "host": ["{{base_url}}"], "path": ["api","patients"]},
+            "body": {"mode": "raw", "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"dateOfBirth\": \"1990-01-01\",\n  \"gender\": \"M\",\n  \"cnssNumber\": \"CNSS-999\"\n}"}
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Doctors",
+      "item": [
+        {
+          "name": "List Doctors",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/api/doctors?page=1&limit=10", "host": ["{{base_url}}"], "path": ["api","doctors"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"10"}]}
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Analyses",
+      "item": [
+        {
+          "name": "List Analyses",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/api/analyses?page=1&limit=10", "host": ["{{base_url}}"], "path": ["api","analyses"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"10"}]}
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Requests",
+      "item": [
+        {
+          "name": "List Requests",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/api/requests?page=1&limit=10", "host": ["{{base_url}}"], "path": ["api","requests"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"10"}]}
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Results",
+      "item": [
+        {
+          "name": "List Results",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/api/results?page=1&limit=10", "host": ["{{base_url}}"], "path": ["api","results"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"10"}]}
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Config",
+      "item": [
+        {
+          "name": "Get Config",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/api/config", "host": ["{{base_url}}"], "path": ["api","config"]}
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Stock",
+      "item": [
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/api/stock/dashboard", "host": ["{{base_url}}"], "path": ["api","stock","dashboard"]}
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Automates",
+      "item": [
+        {
+          "name": "List Automates",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/api/automates", "host": ["{{base_url}}"], "path": ["api","automates"]}
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Home,
@@ -21,9 +21,15 @@ import {
   DollarSign,
   Settings,
   Database,
-  CheckCircle
+  CheckCircle,
+  Shield,
+  Puzzle,
+  PackagePlus,
+  Clock
 } from 'lucide-react';
 import { useAuth } from '../App';
+import { moduleService, ModuleAccess } from '../services/moduleService';
+import { useModules } from '../contexts/ModuleContext';
 
 interface NavItem {
   id: string;
@@ -40,7 +46,10 @@ interface SidebarProps {
 
 export default function Sidebar({ onClose }: SidebarProps) {
   const { user, language } = useAuth();
+  const { moduleVersion } = useModules();
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [stockModuleAccess, setStockModuleAccess] = useState<ModuleAccess | null>(null);
+  const [loadingModules, setLoadingModules] = useState(false);
 
   const t = {
     fr: {
@@ -58,6 +67,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
       stockManagement: 'Gestion des Stocks',
       stockDashboard: 'Tableau de bord',
       addStock: 'Ajouter Stock',
+      createProduct: 'Créer un nouveau produit',
       useStock: 'Utiliser Stock',
       transferStock: 'Transférer Stock',
       adjustInventory: 'Ajuster Inventaire',
@@ -70,7 +80,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
       moduleStore: 'Store de Modules',
       auditTrail: 'Journal d\'Audit',
       backupRestore: 'Sauvegarde & Restauration',
-      automates: 'Intégration Automates'
+      automates: 'Intégration Automates',
+      qualityControl: 'Contrôle Qualité'
     },
     en: {
       dashboard: 'Dashboard',
@@ -87,6 +98,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
       stockManagement: 'Stock Management',
       stockDashboard: 'Stock Dashboard',
       addStock: 'Add Stock',
+      createProduct: 'Create New Product',
       useStock: 'Use Stock',
       transferStock: 'Transfer Stock',
       adjustInventory: 'Adjust Inventory',
@@ -99,11 +111,31 @@ export default function Sidebar({ onClose }: SidebarProps) {
       moduleStore: 'Module Store',
       auditTrail: 'Audit Trail',
       backupRestore: 'Backup & Restore',
-      automates: 'Automate Integration'
+      automates: 'Automate Integration',
+      qualityControl: 'Quality Control'
     }
   }[language];
 
-  const navItems: NavItem[] = [
+  // Check stock module access on component mount and when modules change
+  useEffect(() => {
+    const checkStockModuleAccess = async () => {
+      setLoadingModules(true);
+      try {
+        const access = await moduleService.checkModuleAccess('stock-manager');
+        setStockModuleAccess(access);
+      } catch (error) {
+        console.error('Error checking stock module access:', error);
+        setStockModuleAccess({ hasAccess: false, daysRemaining: 0, status: null, expiresAt: null, features: [] });
+      } finally {
+        setLoadingModules(false);
+      }
+    };
+
+    checkStockModuleAccess();
+  }, [moduleVersion]); // Refresh when moduleVersion changes
+
+  // Create base navigation items
+  const baseNavItems: NavItem[] = [
     {
       id: 'dashboard',
       label: t.dashboard,
@@ -168,72 +200,111 @@ export default function Sidebar({ onClose }: SidebarProps) {
       icon: <CheckCircle size={20} />,
       path: '/validation',
       roles: ['ADMIN', 'BIOLOGIST']
-    },
-    {
-      id: 'stock',
-      label: t.stockManagement,
-      icon: <Package size={20} />,
-      path: '/stock',
-      roles: ['ADMIN', 'TECHNICIAN'],
-      subItems: [
-        {
-          id: 'stock-dashboard',
-          label: t.stockDashboard,
-          icon: <BarChart3 size={16} />,
-          path: '/stock/dashboard',
-          roles: ['ADMIN', 'TECHNICIAN']
-        },
-        {
-          id: 'add-stock',
-          label: t.addStock,
-          icon: <Plus size={16} />,
-          path: '/stock/add',
-          roles: ['ADMIN', 'TECHNICIAN']
-        },
-        {
-          id: 'use-stock',
-          label: t.useStock,
-          icon: <Minus size={16} />,
-          path: '/stock/use',
-          roles: ['ADMIN', 'TECHNICIAN']
-        },
-        {
-          id: 'transfer-stock',
-          label: t.transferStock,
-          icon: <ArrowLeftRight size={16} />,
-          path: '/stock/transfer',
-          roles: ['ADMIN', 'TECHNICIAN']
-        },
-        {
-          id: 'adjust-inventory',
-          label: t.adjustInventory,
-          icon: <SettingsIcon size={16} />,
-          path: '/stock/adjust',
-          roles: ['ADMIN', 'TECHNICIAN']
-        },
-        {
-          id: 'suppliers',
-          label: t.suppliers,
-          icon: <Truck size={16} />,
-          path: '/stock/suppliers',
-          roles: ['ADMIN', 'TECHNICIAN']
-        },
-        {
-          id: 'orders',
-          label: t.orders,
-          icon: <ShoppingCart size={16} />,
-          path: '/stock/orders',
-          roles: ['ADMIN', 'TECHNICIAN']
-        },
-        {
-          id: 'reports',
-          label: t.reports,
-          icon: <FileSpreadsheet size={16} />,
-          path: '/stock/reports',
-          roles: ['ADMIN', 'TECHNICIAN']
-        }
-      ]
-    },
+    }
+  ];
+
+  // Conditionally add stock management if module is licensed
+  const stockNavItem: NavItem | null = loadingModules ? {
+    id: 'stock-loading',
+    label: (
+      <div className="flex items-center justify-between w-full">
+        <span className="text-gray-400">{t.stockManagement}</span>
+        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400"></div>
+      </div>
+    ),
+    icon: <Package size={20} className="text-gray-400" />,
+    path: '#',
+    roles: ['ADMIN', 'TECHNICIAN'],
+    subItems: []
+  } : stockModuleAccess?.hasAccess ? {
+    id: 'stock',
+    label: (
+      <div className="flex items-center justify-between w-full">
+        <span>{t.stockManagement}</span>
+        {stockModuleAccess.daysRemaining <= 30 && (
+          <div className="flex items-center space-x-1 text-xs">
+            <Clock size={12} />
+            <span className={stockModuleAccess.daysRemaining <= 7 ? 'text-red-400' : 'text-yellow-400'}>
+              {stockModuleAccess.daysRemaining}d
+            </span>
+          </div>
+        )}
+      </div>
+    ),
+    icon: <Package size={20} />,
+    path: '/stock',
+    roles: ['ADMIN', 'TECHNICIAN'],
+    subItems: [
+      {
+        id: 'stock-dashboard',
+        label: t.stockDashboard,
+        icon: <BarChart3 size={16} />,
+        path: '/stock/dashboard',
+        roles: ['ADMIN', 'TECHNICIAN']
+      },
+      {
+        id: 'add-stock',
+        label: t.addStock,
+        icon: <Plus size={16} />,
+        path: '/stock/add',
+        roles: ['ADMIN', 'TECHNICIAN']
+      },
+      {
+        id: 'create-product',
+        label: t.createProduct,
+        icon: <PackagePlus size={16} />,
+        path: '/stock/create-product',
+        roles: ['ADMIN', 'TECHNICIAN']
+      },
+      {
+        id: 'use-stock',
+        label: t.useStock,
+        icon: <Minus size={16} />,
+        path: '/stock/use',
+        roles: ['ADMIN', 'TECHNICIAN']
+      },
+      {
+        id: 'transfer-stock',
+        label: t.transferStock,
+        icon: <ArrowLeftRight size={16} />,
+        path: '/stock/transfer',
+        roles: ['ADMIN', 'TECHNICIAN']
+      },
+      {
+        id: 'adjust-inventory',
+        label: t.adjustInventory,
+        icon: <SettingsIcon size={16} />,
+        path: '/stock/adjust',
+        roles: ['ADMIN', 'TECHNICIAN']
+      },
+      {
+        id: 'suppliers',
+        label: t.suppliers,
+        icon: <Truck size={16} />,
+        path: '/stock/suppliers',
+        roles: ['ADMIN', 'TECHNICIAN']
+      },
+      {
+        id: 'orders',
+        label: t.orders,
+        icon: <ShoppingCart size={16} />,
+        path: '/stock/orders',
+        roles: ['ADMIN', 'TECHNICIAN']
+      },
+      {
+        id: 'reports',
+        label: t.reports,
+        icon: <FileSpreadsheet size={16} />,
+        path: '/stock/reports',
+        roles: ['ADMIN', 'TECHNICIAN']
+      }
+    ]
+  } : null;
+
+  // Combine navigation items
+  const navItems: NavItem[] = [
+    ...baseNavItems,
+    ...(stockNavItem ? [stockNavItem] : []),
     {
       id: 'billing',
       label: t.billing,
@@ -248,6 +319,20 @@ export default function Sidebar({ onClose }: SidebarProps) {
       path: '/automates',
       roles: ['ADMIN', 'BIOLOGIST', 'TECHNICIAN']
     },
+    {
+      id: 'quality-control',
+      label: t.qualityControl,
+      icon: <Shield size={20} />,
+      path: '/quality-control',
+      roles: ['ADMIN', 'BIOLOGIST', 'TECHNICIAN']
+    },
+     {
+          id: 'moduleStore',
+          label: t.moduleStore,
+          icon: <Puzzle size={20} color='rgb(197 112 0)' />,
+          path: '/config/modules',
+          roles: ['ADMIN']
+        },
     {
       id: 'config',
       label: t.config,
@@ -276,13 +361,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
           path: '/config/system',
           roles: ['ADMIN']
         },
-        {
-          id: 'moduleStore',
-          label: t.moduleStore,
-          icon: <Package size={20} />,
-          path: '/config/modules',
-          roles: ['ADMIN']
-        },
+       
         {
           id: 'auditTrail',
           label: t.auditTrail,

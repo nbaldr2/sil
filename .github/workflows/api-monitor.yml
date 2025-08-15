@@ -1,0 +1,52 @@
+name: API Monitor
+
+on:
+  schedule:
+    - cron: '*/30 * * * *' # every 30 minutes
+  workflow_dispatch: {}
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install newman
+        run: npm i -g newman newman-reporter-htmlextra
+
+      - name: Prepare environment
+        run: |
+          mkdir -p tmp
+          node -e '
+          const fs=require("fs");
+          const env=JSON.parse(fs.readFileSync("server/postman/SIL-Lab.postman_environment.json","utf8"));
+          const vals=env.values.reduce((m,v)=> (m[v.key]=v, m),{});
+          vals.base_url.value=process.env.BASE_URL||vals.base_url.value;
+          vals.admin_email.value=process.env.ADMIN_EMAIL||vals.admin_email.value;
+          vals.admin_password.value=process.env.ADMIN_PASSWORD||vals.admin_password.value;
+          env.values=Object.values(vals);
+          fs.writeFileSync("tmp/env.json", JSON.stringify(env));
+          '
+        env:
+          BASE_URL: ${{ secrets.API_BASE_URL }}
+          ADMIN_EMAIL: ${{ secrets.API_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.API_ADMIN_PASSWORD }}
+
+      - name: Run monitor
+        run: |
+          newman run server/postman/monitor.json \
+            -e tmp/env.json \
+            --reporters cli,htmlextra \
+            --reporter-htmlextra-export newman-report.html
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-monitor-report
+          path: newman-report.html

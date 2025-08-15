@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Package, Star, Download, X, Check, RefreshCw, AlertCircle } from 'lucide-react';
+import { Star, Download, X, Check, RefreshCw, AlertCircle,Puzzle } from 'lucide-react';
 
 interface Plugin {
   id: string;
@@ -201,7 +201,7 @@ export const PluginStore: React.FC = () => {
         {/* No Results */}
         {!loading && filteredPlugins.length === 0 && (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-            <Package size={48} className="mx-auto text-gray-400 dark:text-gray-600 mb-4" />
+            <Puzzle size={48} className="mx-auto text-gray-400 dark:text-gray-600 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No plugins found</h3>
             <p className="text-gray-500 dark:text-gray-400">Try adjusting your search or filter criteria</p>
           </div>

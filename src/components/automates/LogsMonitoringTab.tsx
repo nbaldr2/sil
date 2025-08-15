@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Activity, AlertTriangle, CheckCircle, XCircle, Clock, Filter, Download, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../App';
+import { automatesService } from '../../services/integrations';
 
 interface Automate {
   id: string;
@@ -33,6 +34,45 @@ export default function LogsMonitoringTab({ automates, onRefresh }: LogsMonitori
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [dateRange, setDateRange] = useState<string>('24h');
+  const [logsByAutomate, setLogsByAutomate] = useState<Record<string, AutomateTransferLog[]>>({});
+  const [loading, setLoading] = useState(false);
+
+  // Load logs for all automates (limited) on mount and when list changes
+  useEffect(() => {
+    let cancelled = false;
+    const loadAll = async () => {
+      setLoading(true);
+      try {
+        const entries = await Promise.all(
+          (automates || []).map(async (a) => {
+            try {
+              const res = await automatesService.getTransferLogs(a.id, { limit: 50 });
+              return [a.id, res.logs || []] as const;
+            } catch (e) {
+              console.error('Failed to load logs for', a.id, e);
+              return [a.id, []] as const;
+            }
+          })
+        );
+        if (!cancelled) {
+          const map: Record<string, AutomateTransferLog[]> = {};
+          for (const [id, logs] of entries) map[id] = logs;
+          setLogsByAutomate(map);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    if (automates && automates.length) loadAll();
+    return () => {
+      cancelled = true;
+    };
+  }, [automates]);
+
+  // derive logs from fetched map or props as fallback
+  const selectedLogs = selectedAutomate
+    ? (logsByAutomate[selectedAutomate.id] || automates.find(a => a.id === selectedAutomate.id)?.transferLogs || [])
+    : (automates || []).flatMap(a => (logsByAutomate[a.id] || a.transferLogs || []));
 
   const t = {
     fr: {
@@ -173,7 +213,7 @@ export default function LogsMonitoringTab({ automates, onRefresh }: LogsMonitori
     return new Date(timestamp).toLocaleString(language === 'fr' ? 'fr-FR' : 'en-US');
   };
 
-  const filteredLogs = (selectedAutomate?.transferLogs || []).filter(log => {
+  const filteredLogs = selectedLogs.filter(log => {
     const statusMatch = filterStatus === 'all' || log.status === filterStatus;
     const typeMatch = filterType === 'all' || log.type === filterType;
     return statusMatch && typeMatch;
@@ -371,7 +411,37 @@ export default function LogsMonitoringTab({ automates, onRefresh }: LogsMonitori
               {t.export}
             </button>
             <button
-              onClick={onRefresh}
+              onClick={async () => {
+                if (selectedAutomate) {
+                  try {
+                    const res = await automatesService.getTransferLogs(selectedAutomate.id, { limit: 50 });
+                    setLogsByAutomate(prev => ({ ...prev, [selectedAutomate.id]: res.logs || [] }));
+                  } catch (e) {
+                    console.error('Refresh logs failed', e);
+                  }
+                } else {
+                  // refresh all
+                  try {
+                    const entries = await Promise.all(
+                      (automates || []).map(async (a) => {
+                        try {
+                          const r = await automatesService.getTransferLogs(a.id, { limit: 50 });
+                          return [a.id, r.logs || []] as const;
+                        } catch {
+                          return [a.id, []] as const;
+                        }
+                      })
+                    );
+                    const map: Record<string, AutomateTransferLog[]> = {};
+                    for (const [id, logs] of entries) map[id] = logs;
+                    setLogsByAutomate(map);
+                  } catch (e) {
+                    console.error('Refresh all logs failed', e);
+                  }
+                }
+                // also allow parent to refresh automate list if needed
+                onRefresh();
+              }}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
             >
               <RefreshCw size={16} className="mr-2" />

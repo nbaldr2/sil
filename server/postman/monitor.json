@@ -1,0 +1,133 @@
+{
+  "info": {
+    "name": "SIL Lab API Monitor",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Lightweight monitor focusing on health and key endpoints."
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.code === 200);",
+                  "const json = pm.response.json();",
+                  "pm.test('Status OK', () => json.status === 'ok');",
+                  "pm.test('Has timestamp', () => typeof json.timestamp === 'string');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"}],
+            "url": {"raw":"{{base_url}}/api/auth/login","host":["{{base_url}}"],"path":["api","auth","login"]},
+            "body": {"mode":"raw","raw":"{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"}
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login 200', () => pm.response.code === 200);",
+                  "const json = pm.response.json();",
+                  "pm.environment.set('auth_token', json.token);",
+                  "pm.test('Token set', () => !!pm.environment.get('auth_token'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/api/auth/me", "host": ["{{base_url}}"], "path": ["api", "auth", "me"]}
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Me 200', () => pm.response.code === 200);",
+                  "const json = pm.response.json();",
+                  "pm.test('Has user', () => json && json.user && json.user.email);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Key Data",
+      "item": [
+        {
+          "name": "Patients List",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/api/patients?limit=1", "host": ["{{base_url}}"], "path": ["api", "patients"], "query": [{"key":"limit","value":"1"}]}
+          },
+         "exec": [
+        "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+        "const json = pm.response.json();",
+        "pm.test('Status OK', function () { pm.expect(json.status).to.eql('ok'); });",
+        "pm.test('Has timestamp', function () { pm.expect(typeof json.timestamp).to.eql('string'); });"
+      ]
+        },
+        {
+          "name": "Doctors List",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/api/doctors?limit=1", "host": ["{{base_url}}"], "path": ["api", "doctors"], "query": [{"key":"limit","value":"1"}]}
+          },
+          "event": [
+            {"listen":"test","script":{"type":"text/javascript","exec":[
+              "pm.test('Doctors 200', () => pm.response.code === 200);"
+            ]}}
+          ]
+        },
+        {
+          "name": "Analyses List",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{auth_token}}"}],
+            "url": {"raw": "{{base_url}}/api/analyses?limit=1", "host": ["{{base_url}}"], "path": ["api", "analyses"], "query": [{"key":"limit","value":"1"}]}
+          },
+          "event": [
+            {"listen":"test","script":{"type":"text/javascript","exec":[
+              "pm.test('Analyses 200', () => pm.response.code === 200);"
+            ]}}
+          ]
+        }
+      ]
+    }
+  ]
+}
