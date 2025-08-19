@@ -12,6 +12,9 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const { generateSwaggerComponents } = require('./utils/swagger-generator');
 const { HL7Server } = require('./services/hl7/hl7-server');
 
+// Initialize Cron Service for automatic backups
+const cronService = require('./services/cronService');
+
 // Routes
 const authRoutes = require('./routes/auth');
 const patientRoutes = require('./routes/patients');
@@ -24,6 +27,7 @@ const stockRoutes = require('./routes/stock');
 const pluginRoutes = require('./routes/plugins');
 const automateRoutes = require('./routes/automates');
 const moduleRoutes = require('./routes/modules');
+const adminRoutes = require('./routes/admin');
  
 
 const app = express();
@@ -112,6 +116,7 @@ app.use('/api/stock', stockRoutes);
 app.use('/api/plugins', pluginRoutes);
 app.use('/api/automates', automateRoutes);
 app.use('/api/modules', moduleRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error Handling
 app.use((err, req, res, next) => {
@@ -130,12 +135,14 @@ app.use('*', (req, res) => {
 // Graceful Shutdown
 process.on('SIGINT', async () => {
   console.log('Shutting down gracefully...');
+  await cronService.stopAllJobs();
   await prisma.$disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('Shutting down gracefully...');
+  await cronService.stopAllJobs();
   await prisma.$disconnect();
   process.exit(0);
 });

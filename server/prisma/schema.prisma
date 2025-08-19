@@ -155,13 +155,33 @@ model Doctor {
 }
 
 model Backup {
-  id        String   @id @default(cuid())
-  date      DateTime @default(now())
-  filename  String
-  status    String
-  size      Int
-  createdBy String
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  filename    String
+  status      String   // PENDING, IN_PROGRESS, COMPLETED, FAILED
+  size        Int
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  type        String   @default("MANUAL") // MANUAL, AUTOMATIC
+  description String?
+}
+
+model BackupSettings {
+  id                  String   @id @default(cuid())
+  autoBackupEnabled   Boolean  @default(false)
+  backupFrequency     String   @default("WEEKLY") // DAILY, WEEKLY, MONTHLY
+  retentionDays       Int      @default(30)
+  includeFiles        Boolean  @default(true)
+  compressionEnabled  Boolean  @default(true)
+  encryptionEnabled   Boolean  @default(false)
+  lastBackupDate      DateTime?
+  nextScheduledBackup DateTime?
+  cronJobId           String?  // Store cron job ID for management
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("backup_settings")
 }
 
 model AuditLog {
