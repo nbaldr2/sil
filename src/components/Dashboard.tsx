@@ -27,6 +27,8 @@ import { useNavigate } from 'react-router-dom';
 import { stockService } from '../services/integrations';
 import { moduleService, ModuleAccess } from '../services/moduleService';
 import { useModules } from '../contexts/ModuleContext';
+import { BackupReminder } from './BackupReminder';
+import { useModuleManager } from './ModuleManager';
 
 interface DashboardData {
   totalRequests: number;
@@ -50,6 +52,7 @@ interface DashboardData {
 export default function Dashboard() {
   const { language, user } = useAuth();
   const { moduleVersion } = useModules();
+  const { getActiveDashboardWidgets, getActiveQuickActions } = useModuleManager();
   const navigate = useNavigate();
   const [stockModuleAccess, setStockModuleAccess] = useState<ModuleAccess | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData>({
@@ -453,6 +456,9 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Backup Reminder */}
+      <BackupReminder />
+
       {/* Quick Actions */}
       <div className="mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
@@ -484,6 +490,28 @@ export default function Dashboard() {
               <span className="hidden sm:inline">{language === 'fr' ? 'Saisir Résultats' : 'Enter Results'}</span>
               <span className="sm:hidden">{language === 'fr' ? 'Résultats' : 'Results'}</span>
             </button>
+            
+            {/* Dynamic Module Quick Actions */}
+            {getActiveQuickActions().map((action, index) => (
+              <button
+                key={`module-action-${index}`}
+                onClick={() => {
+                  // Handle module action
+                  if (action.action === 'create-backup') {
+                    navigate('/config/backup');
+                  } else if (action.action === 'new-control') {
+                    navigate('/quality-control');
+                  } else if (action.action === 'control-charts') {
+                    navigate('/quality-control');
+                  }
+                }}
+                className={`flex items-center px-3 sm:px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors text-sm sm:text-base ${action.color}`}
+              >
+                <action.icon size={16} className="mr-2" />
+                <span className="hidden sm:inline">{action.name[language]}</span>
+                <span className="sm:hidden">{action.name[language].split(' ')[0]}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -551,6 +579,23 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Dynamic Module Widgets */}
+      {getActiveDashboardWidgets().length > 0 && (
+        <div className="mb-6 sm:mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            {language === 'fr' ? 'Modules' : 'Modules'}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {getActiveDashboardWidgets().map((widget, index) => (
+              <div key={`module-widget-${widget.id}-${index}`}>
+                <widget.component language={language} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
   {/* Stock Report Section - Only show if stock module is accessible */}
       {stockModuleAccess?.hasAccess && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">

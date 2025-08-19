@@ -30,6 +30,7 @@ import AutomateIntegrationPanel from './components/AutomateIntegrationPanel';
 import QualityControl from './components/QualityControl';
 import ModuleStore from './components/ModuleStore';
 import { ModuleProvider } from './contexts/ModuleContext';
+import { ModuleManager } from './components/ModuleManager';
 import './index.css';
 import StockReport from './components/StockReport';
 
@@ -217,7 +218,8 @@ function App() {
               <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
               <main className="flex-1 overflow-y-auto p-2 sm:p-4 lg:p-6">
                 <div className="max-w-7xl mx-auto">
-                  <Routes>
+                  <ModuleManager>
+                    <Routes>
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/patients" element={<PatientManagement />} />
@@ -255,6 +257,7 @@ function App() {
                     
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>
+                  </ModuleManager>
                 </div>
               </main>
             </div>

@@ -4,7 +4,6 @@ import {
   Home,
   Users,
   FileText,
-  UserPlus,
   ClipboardList,
   BarChart3,
   Package,
@@ -25,11 +24,15 @@ import {
   Shield,
   Puzzle,
   PackagePlus,
-  Clock
+  Clock,
+  Stethoscope,
+  Microscope,
+  DatabaseBackup
 } from 'lucide-react';
 import { useAuth } from '../App';
 import { moduleService, ModuleAccess } from '../services/moduleService';
 import { useModules } from '../contexts/ModuleContext';
+import { useModuleManager } from './ModuleManager';
 
 interface NavItem {
   id: string;
@@ -47,6 +50,7 @@ interface SidebarProps {
 export default function Sidebar({ onClose }: SidebarProps) {
   const { user, language } = useAuth();
   const { moduleVersion } = useModules();
+  const { getActiveMenuItems } = useModuleManager();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [stockModuleAccess, setStockModuleAccess] = useState<ModuleAccess | null>(null);
   const [loadingModules, setLoadingModules] = useState(false);
@@ -153,7 +157,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
     {
       id: 'doctors',
       label: t.doctors,
-      icon: <UserPlus size={20} />,
+      icon: <Stethoscope size={20} />,
       path: '/doctors',
       roles: ['ADMIN', 'SECRETARY']
     },
@@ -190,7 +194,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
     {
       id: 'results',
       label: t.results,
-      icon: <BarChart3 size={20} />,
+      icon: <Microscope size={20} />,
       path: '/results',
       roles: ['ADMIN', 'BIOLOGIST', 'TECHNICIAN']
     },
@@ -368,19 +372,29 @@ export default function Sidebar({ onClose }: SidebarProps) {
           icon: <FileText size={20} />,
           path: '/config/audit',
           roles: ['ADMIN']
-        },
-        {
+        }
+       
+      ]
+    },
+     {
           id: 'backupRestore',
           label: t.backupRestore,
-          icon: <BarChart3 size={20} />,
+          icon: <DatabaseBackup size={20} />,
           path: '/config/backup',
           roles: ['ADMIN']
         }
-      ]
-    }
   ];
 
   const filteredNav = navItems.filter(item => item.roles.includes(user?.role || ''));
+  
+  // Get dynamic module menu items
+  const moduleMenuItems = getActiveMenuItems().map(item => ({
+    id: `module-${item.path}`,
+    label: item.name[language],
+    icon: <item.icon size={20} />,
+    path: item.path,
+    roles: item.permissions
+  }));
 
   const handleNavigation = () => {
     if (onClose) {
@@ -463,6 +477,33 @@ export default function Sidebar({ onClose }: SidebarProps) {
             )}
           </div>
         ))}
+        
+        {/* Dynamic Module Menu Items */}
+        {moduleMenuItems.length > 0 && (
+          <>
+            <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              {language === 'fr' ? 'Modules' : 'Modules'}
+            </div>
+            {moduleMenuItems.map(item => (
+              <div key={item.id}>
+                <NavLink
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center px-3 sm:px-4 py-2 text-sm rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100'
+                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                    }`
+                  }
+                  onClick={handleNavigation}
+                >
+                  {item.icon}
+                  <span className="ml-2 sm:ml-3 font-medium truncate">{item.label}</span>
+                </NavLink>
+              </div>
+            ))}
+          </>
+        )}
       </div>
       
       {/* Footer */}
