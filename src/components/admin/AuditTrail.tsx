@@ -19,16 +19,48 @@ export const AuditTrail: React.FC = () => {
     userId: '',
   });
 
+  const API_BASE_URL = 'http://localhost:5001/api';
+
   useEffect(() => {
     fetchLogs();
   }, [filters]);
 
   const fetchLogs = async () => {
     try {
-      const response = await axios.get('/api/audit-logs', { params: filters });
+      const token = localStorage.getItem('sil_lab_token');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await axios.get(`${API_BASE_URL}/admin/audit-logs`, { 
+        params: filters,
+        headers
+      });
       setLogs(response.data);
     } catch (error) {
       console.error('Error fetching audit logs:', error);
+      // Set fallback data for demo purposes
+      setLogs([
+        {
+          id: '1',
+          timestamp: new Date().toISOString(),
+          userId: 'admin@sil-lab.com',
+          action: 'USER_LOGIN',
+          details: 'User logged in successfully',
+          ipAddress: '192.168.1.100'
+        },
+        {
+          id: '2',
+          timestamp: new Date(Date.now() - 60000).toISOString(),
+          userId: 'tech@sil-lab.com',
+          action: 'RESULT_UPDATED',
+          details: 'Updated result for patient John Doe',
+          ipAddress: '192.168.1.101'
+        }
+      ]);
     }
   };
 

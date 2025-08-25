@@ -211,13 +211,16 @@ export default function NewRequestWizard() {
             );
             if (needsUpdate) {
               try {
+                // Format phone number - remove any non-digit characters except +
+                const formattedPhone = requestData.patient.phone.replace(/[^\d+]/g, '');
+                
                 await patientsService.updatePatient(existing.id, {
                   firstName: requestData.patient.firstName,
                   lastName: requestData.patient.lastName,
                   dateOfBirth: new Date(requestData.patient.dateOfBirth).toISOString(),
                   gender: requestData.patient.gender,
-                  phone: requestData.patient.phone,
-                  email: requestData.patient.email,
+                  phone: formattedPhone,
+                  email: requestData.patient.email || null,
                   cnssNumber: requestData.patient.cnssNumber,
                   address: requestData.patient.address
                 });
@@ -226,66 +229,98 @@ export default function NewRequestWizard() {
               }
             }
           } else {
+            // Format phone number - remove any non-digit characters except +
+            const formattedPhone = requestData.patient.phone.replace(/[^\d+]/g, '');
+            
             // Create new patient
             const newPatient = await patientsService.createPatient({
               firstName: requestData.patient.firstName,
               lastName: requestData.patient.lastName,
               dateOfBirth: new Date(requestData.patient.dateOfBirth).toISOString(),
               gender: requestData.patient.gender,
-              phone: requestData.patient.phone,
-              email: requestData.patient.email,
+              phone: formattedPhone,
+              email: requestData.patient.email || null,
               cnssNumber: requestData.patient.cnssNumber,
               address: requestData.patient.address
             });
             patientId = newPatient.id;
           }
         } catch (error) {
+          // Format phone number - remove any non-digit characters except +
+          const formattedPhone = requestData.patient.phone.replace(/[^\d+]/g, '');
+          
           // Create new patient if search fails
           const newPatient = await patientsService.createPatient({
             firstName: requestData.patient.firstName,
             lastName: requestData.patient.lastName,
             dateOfBirth: new Date(requestData.patient.dateOfBirth).toISOString(),
             gender: requestData.patient.gender,
-            phone: requestData.patient.phone,
-            email: requestData.patient.email,
+            phone: formattedPhone,
+            email: requestData.patient.email || null,
             cnssNumber: requestData.patient.cnssNumber,
             address: requestData.patient.address
           });
           patientId = newPatient.id;
         }
       } else {
+        // Format phone number - remove any non-digit characters except +
+        const formattedPhone = requestData.patient.phone.replace(/[^\d+]/g, '');
+        
         // Create new patient without CNSS
         const newPatient = await patientsService.createPatient({
           firstName: requestData.patient.firstName,
           lastName: requestData.patient.lastName,
           dateOfBirth: new Date(requestData.patient.dateOfBirth).toISOString(),
           gender: requestData.patient.gender,
-          phone: requestData.patient.phone,
-          email: requestData.patient.email,
+          phone: formattedPhone,
+          email: requestData.patient.email || null,
           address: requestData.patient.address
         });
         patientId = newPatient.id;
       }
 
       // Prepare analyses data
-      const analyses = requestData.analyses.map(analysis => ({
-        analysisId: analysis.id,
-        price: analysis.price,
-        tva: analysis.tva
-      }));
+      const analyses = requestData.analyses.map(analysis => {
+        // Calculate price including TVA
+        const priceWithTVA = analysis.price + (analysis.price * analysis.tva / 100);
+        
+        return {
+          analysisId: analysis.id,
+          price: priceWithTVA
+        };
+      });
 
       // Create request
+      // Format the date properly - ensure it's a valid ISO string
+      let appointmentDate;
+      try {
+        // Make sure we have a valid date
+        if (requestData.appointment.date) {
+          appointmentDate = new Date(requestData.appointment.date);
+          // Check if it's a valid date
+          if (isNaN(appointmentDate.getTime())) {
+            throw new Error('Invalid date');
+          }
+          appointmentDate = appointmentDate.toISOString().split('T')[0]; // Get YYYY-MM-DD format
+        } else {
+          appointmentDate = new Date().toISOString().split('T')[0]; // Default to today
+        }
+      } catch (error) {
+        console.error('Date parsing error:', error);
+        appointmentDate = new Date().toISOString().split('T')[0]; // Default to today
+      }
+      
       const requestPayload = {
         patientId,
         doctorId: requestData.doctor.id || undefined,
-        appointmentDate: new Date(requestData.appointment.date).toISOString(),
-        appointmentTime: requestData.appointment.time,
+        appointmentDate: appointmentDate,
+        appointmentTime: requestData.appointment.time || '09:00',
         sampleType: requestData.appointment.sampleType,
         tubeType: requestData.appointment.tubeType,
         urgent: requestData.appointment.urgency === 'URGENT' || requestData.appointment.urgency === 'EMERGENCY',
-        discount: requestData.billing.discount,
-        advancePayment: requestData.billing.advancePayment,
-        notes: requestData.appointment.notes + (requestData.billing.notes ? `\nBilling: ${requestData.billing.notes}` : ''),
+        discount: requestData.billing.discount || 0,
+        advancePayment: requestData.billing.advancePayment || 0,
+        notes: (requestData.appointment.notes || '') + (requestData.billing.notes ? `\nBilling: ${requestData.billing.notes}` : ''),
         analyses
       };
 
@@ -322,7 +357,32 @@ export default function NewRequestWizard() {
       navigate('/requests');
     } catch (error) {
       console.error('Error submitting request:', error);
-      alert(language === 'fr' ? 'Erreur lors de la création de la demande' : 'Error creating request');
+      
+      // Show more detailed error message
+      let errorMessage = language === 'fr' ? 'Erreur lors de la création de la demande' : 'Error creating request';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Validation')) {
+          errorMessage += language === 'fr' 
+            ? ': Validation échouée. Veuillez vérifier les informations du patient (téléphone, email, etc.)' 
+            : ': Validation failed. Please check patient information (phone, email, etc.)';
+        } else if (error.message.includes('Internal server error')) {
+          // Extract the detailed error message if available
+          const detailStart = error.message.indexOf(':');
+          if (detailStart > -1) {
+            const detailMessage = error.message.substring(detailStart + 1).trim();
+            errorMessage += language === 'fr'
+              ? `: Erreur serveur - ${detailMessage}`
+              : `: Server error - ${detailMessage}`;
+          } else {
+            errorMessage += `: ${error.message}`;
+          }
+        } else {
+          errorMessage += `: ${error.message}`;
+        }
+      }
+      
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }

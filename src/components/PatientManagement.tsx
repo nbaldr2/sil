@@ -1,7 +1,8 @@
-import  React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Eye, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Edit, Eye, X, FileText } from 'lucide-react';
 import { useAuth } from '../App';
 import { patientsService } from '../services/integrations';
+import { useNavigate } from 'react-router-dom';
 
 interface Patient {
   id: string;
@@ -19,6 +20,7 @@ interface Patient {
 
 export default function PatientManagement() {
   const { language } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewModal, setShowNewModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -38,7 +40,8 @@ export default function PatientManagement() {
       actions: 'Actions',
       close: 'Fermer',
       save: 'Enregistrer',
-      cancel: 'Annuler'
+      cancel: 'Annuler',
+      viewResults: 'Voir les résultats'
     },
     en: {
       title: 'Patient Management',
@@ -53,7 +56,8 @@ export default function PatientManagement() {
       actions: 'Actions',
       close: 'Close',
       save: 'Save',
-      cancel: 'Cancel'
+      cancel: 'Cancel',
+      viewResults: 'View Results'
     }
   }[language];
 
@@ -89,6 +93,13 @@ export default function PatientManagement() {
   const handleEdit = (patient: Patient) => {
     setSelectedPatient(patient);
     setShowNewModal(true);
+  };
+  
+  const handleViewResults = (patient: Patient) => {
+    // Navigate to results page with patient ID as a query parameter
+    // Make sure we're using the correct patient ID format from the database
+    navigate(`/results?patientId=${patient.id}`);
+    console.log('Navigating to results for patient:', patient.id);
   };
 
   const NewPatientModal = () => (
@@ -284,6 +295,13 @@ export default function PatientManagement() {
                         title="Edit"
                       >
                         <Edit size={16} />
+                      </button>
+                      <button 
+                        onClick={() => handleViewResults(patient)}
+                        className="text-purple-600 hover:text-purple-900 transition-colors"
+                        title={t.viewResults}
+                      >
+                        <FileText size={16} />
                       </button>
                     </div>
                   </td>

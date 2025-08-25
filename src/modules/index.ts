@@ -1,6 +1,8 @@
 // Module Registry
 import { BackupModule } from './BackupModule';
 import { QualityControlModule } from './QualityControlModule';
+import AnalyticsProPage, { AnalyticsProWidget } from './AnalyticsPro';
+import { BarChart3 } from 'lucide-react';
 
 export interface ModuleDefinition {
   id: string;
@@ -108,7 +110,63 @@ export interface ModuleDefinition {
 // Registry of all available modules
 export const moduleRegistry: Record<string, ModuleDefinition> = {
   'backup-manager': BackupModule,
-  'quality-control': QualityControlModule
+  'quality-control': QualityControlModule,
+  'analytics-pro': {
+    id: 'analytics-pro',
+    name: { fr: 'Analytics Pro', en: 'Analytics Pro' },
+    description: {
+      fr: "Analytique avancée et intelligence d'affaires avec tableaux de bord personnalisés, suivi des KPI et insights prédictifs.",
+      en: 'Advanced analytics and business intelligence with custom dashboards, KPI tracking, and predictive insights.'
+    },
+    version: '0.1.0',
+    category: 'analytics',
+  icon: null,
+    color: '#4F46E5',
+    features: {
+      fr: ['Tableaux de bord personnalisés', 'Suivi des KPI', 'Analyses prédictives'],
+      en: ['Custom dashboards', 'KPI tracking', 'Predictive analytics']
+    },
+    permissions: ['ADMIN', 'BIOLOGIST'],
+    routes: [
+      {
+        path: '/modules/analytics-pro',
+        component: AnalyticsProPage,
+        name: { fr: 'Analytics Pro', en: 'Analytics Pro' }
+      }
+    ],
+    menuItems: [
+      {
+        name: { fr: 'Analytics', en: 'Analytics' },
+        path: '/modules/analytics-pro',
+  icon: BarChart3,
+        permissions: ['ADMIN', 'BIOLOGIST']
+      }
+    ],
+    dashboardWidgets: [
+      {
+        id: 'analytics-pro-kpi',
+        name: { fr: 'KPI Analytics', en: 'KPI Analytics' },
+        component: AnalyticsProWidget,
+        size: 'large',
+        permissions: ['ADMIN', 'BIOLOGIST']
+      }
+    ],
+    quickActions: [],
+    notifications: [],
+    settings: [
+      {
+        key: 'analytics.enablePredictive',
+        name: { fr: 'Activer prédictif', en: 'Enable Predictive' },
+        type: 'boolean',
+        default: true,
+        description: { fr: 'Activer les analyses prédictives', en: 'Enable predictive analytics' }
+      }
+    ],
+    dependencies: [],
+    author: 'SIL Labs',
+    license: 'proprietary',
+    documentation: { fr: '', en: '' }
+  },
 };
 
 // Get module by ID

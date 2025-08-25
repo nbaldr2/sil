@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../App';
 import { moduleService, Module, ModuleLicense } from '../services/moduleService';
 import { useModules } from '../contexts/ModuleContext';
+import { ConfirmationDialog } from './ui/ConfirmationDialog';
 
 export default function ModuleStore() {
   const { language } = useAuth();
@@ -35,6 +36,11 @@ export default function ModuleStore() {
   const [contactEmail, setContactEmail] = useState('');
   const [installing, setInstalling] = useState(false);
   const [error, setError] = useState('');
+  
+  // Confirmation dialog states
+  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
+  const [selectedLicenseId, setSelectedLicenseId] = useState<string | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const t = {
     fr: {
@@ -69,7 +75,9 @@ export default function ModuleStore() {
       invalidLicense: 'Clé de licence invalide',
       licenseInUse: 'Cette clé de licence est déjà utilisée',
       installError: 'Erreur lors de l\'installation',
-      generateDemo: 'Générer Clé Demo'
+      generateDemo: 'Générer Clé Demo',
+      confirmDeactivate: 'Êtes-vous sûr de vouloir désactiver ce module? Cette action supprimera toutes les fonctionnalités associées.',
+      deactivateSuccess: 'Module désactivé avec succès'
     },
     en: {
       title: 'Module Store',
@@ -103,7 +111,9 @@ export default function ModuleStore() {
       invalidLicense: 'Invalid license key',
       licenseInUse: 'License key already in use',
       installError: 'Installation error',
-      generateDemo: 'Generate Demo Key'
+      generateDemo: 'Generate Demo Key',
+      confirmDeactivate: 'Are you sure you want to deactivate this module? This will remove all associated functionality.',
+      deactivateSuccess: 'Module deactivated successfully'
     }
   }[language];
 
@@ -192,15 +202,27 @@ export default function ModuleStore() {
     }
   };
 
-  const handleDeactivate = async (licenseId: string) => {
-    if (!confirm('Are you sure you want to deactivate this module?')) return;
+  const handleDeactivate = (licenseId: string) => {
+    setSelectedLicenseId(licenseId);
+    setShowDeactivateConfirm(true);
+  };
+
+  const confirmDeactivate = async () => {
+    if (!selectedLicenseId) return;
     
+    setConfirmLoading(true);
     try {
-      await moduleService.deactivateModule(licenseId);
+      await moduleService.deactivateModule(selectedLicenseId);
+      setError(t.deactivateSuccess);
+      setShowDeactivateConfirm(false);
+      setSelectedLicenseId(null);
       await loadData();
       refreshModules(); // Trigger sidebar refresh
+      setTimeout(() => setError(''), 3000);
     } catch (error: any) {
       setError(error.message || 'Failed to deactivate module');
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -272,7 +294,7 @@ export default function ModuleStore() {
           <div className={`mb-6 p-4 rounded-lg ${
             error.includes('success') || error.includes('started')
               ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
-              : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+              : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
           }`}>
             {error}
           </div>
@@ -584,6 +606,22 @@ export default function ModuleStore() {
             </div>
           </div>
         )}
+
+        {/* Confirmation Dialog */}
+        <ConfirmationDialog
+          isOpen={showDeactivateConfirm}
+          onClose={() => {
+            setShowDeactivateConfirm(false);
+            setSelectedLicenseId(null);
+          }}
+          onConfirm={confirmDeactivate}
+          title={language === 'fr' ? 'Désactiver le module' : 'Deactivate Module'}
+          message={t.confirmDeactivate}
+          confirmText={t.deactivate}
+          cancelText={t.cancel}
+          type="warning"
+          loading={confirmLoading}
+        />
       </div>
     </div>
   );

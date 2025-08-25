@@ -35,8 +35,10 @@ export interface BackupStats {
 class BackupService {
   private async apiRequest(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
+    const token = localStorage.getItem('sil_lab_token');
     const headers = {
       'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
       ...options.headers,
     };
 
@@ -77,7 +79,15 @@ class BackupService {
 
   // Download backup file
   async downloadBackup(backupId: string): Promise<Blob> {
-    const response = await fetch(`${API_BASE_URL}/admin/backup/${backupId}/download`);
+    const token = localStorage.getItem('sil_lab_token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/admin/backup/${backupId}/download`, {
+      headers
+    });
     if (!response.ok) {
       throw new Error(`Download failed: ${response.status}`);
     }
@@ -88,6 +98,7 @@ class BackupService {
   async uploadBackup(file: File, onProgress?: (progress: number) => void): Promise<BackupData> {
     const formData = new FormData();
     formData.append('backup', file);
+    const token = localStorage.getItem('sil_lab_token');
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -120,6 +131,12 @@ class BackupService {
       });
 
       xhr.open('POST', `${API_BASE_URL}/admin/backup/upload`);
+      
+      // Add authorization header if token exists
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+      
       xhr.send(formData);
     });
   }

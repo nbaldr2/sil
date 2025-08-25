@@ -657,17 +657,7 @@ export default function RequestManagement() {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('id')}
-                >
-                  <div className="flex items-center">
-                    {t.id}
-                    {sortBy === 'id' && (
-                      <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                    )}
-                  </div>
-                </th>
+                {/* ID column removed */}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t.patient}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t.tests}</th>
                 <th 
@@ -711,7 +701,7 @@ export default function RequestManagement() {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-8 text-center">
+                  <td colSpan={8} className="px-6 py-8 text-center">
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                       <span className="ml-2 text-gray-600 dark:text-gray-400">{language === 'fr' ? 'Chargement...' : 'Loading...'}</span>
@@ -720,7 +710,7 @@ export default function RequestManagement() {
                 </tr>
               ) : paginatedRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-8 text-center">
+                  <td colSpan={8} className="px-6 py-8 text-center">
                     <div className="text-gray-500 dark:text-gray-400">
                       {searchTerm || statusFilter !== 'ALL' || priorityFilter !== 'ALL' || dateFilter 
                         ? (language === 'fr' ? 'Aucune demande trouvée pour cette recherche.' : 'No requests found for this search.') 
@@ -731,7 +721,7 @@ export default function RequestManagement() {
               ) : (
                 paginatedRequests.map((request) => (
                 <tr key={request.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{request.id}</td>
+                  {/* ID column removed */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {request.patient ? `${request.patient.firstName} ${request.patient.lastName}` : 'N/A'}
                     {request.patient?.cnssNumber && (

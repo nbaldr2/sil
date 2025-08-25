@@ -29,6 +29,8 @@ import { BackupRestore } from './components/admin/BackupRestore';
 import AutomateIntegrationPanel from './components/AutomateIntegrationPanel';
 import QualityControl from './components/QualityControl';
 import ModuleStore from './components/ModuleStore';
+import AnalyticsBasic from './components/analytics/AnalyticsBasic';
+import AnalyticsProPage from './modules/AnalyticsPro';
 import { ModuleProvider } from './contexts/ModuleContext';
 import { ModuleManager } from './components/ModuleManager';
 import './index.css';
@@ -219,6 +221,7 @@ function App() {
               <main className="flex-1 overflow-y-auto p-2 sm:p-4 lg:p-6">
                 <div className="max-w-7xl mx-auto">
                   <ModuleManager>
+                    {/* Core app routes */}
                     <Routes>
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<Dashboard />} />
@@ -234,8 +237,18 @@ function App() {
                     <Route path="/config/prices" element={<PriceManagement />} />
                     <Route path="/config/users" element={<UserManagement />} />
                     <Route path="/config/modules" element={<ModuleStore />} />
+                    <Route path="/analytics" element={<AnalyticsBasic />} />
                     <Route path="/config/audit" element={<AuditTrail />} />
                     <Route path="/config/backup" element={<BackupRestore />} />
+
+                    {/* Analytics Pro direct route for testing */}
+                    <Route path="/modules/analytics-pro" element={<AnalyticsProPage />} />
+                    
+                    {/* Backwards compat: redirect old Pro path to module route */}
+                    <Route path="/analytics-pro" element={<Navigate to="/modules/analytics-pro" replace />} />
+
+                    {/* Module dynamic routes placeholder to avoid catch-all redirect */}
+                    <Route path="/modules/*" element={<div />} />
 
                     {/* Automate Integration Routes */}
                     <Route path="/automates" element={<AutomateIntegrationPanel />} />
@@ -255,7 +268,9 @@ function App() {
                     <Route path="/stock/orders" element={<OrdersManagement />} />
                     <Route path="/stock/reports" element={<StockReport />} />
                     
+                    {/* Catch-all */}
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
                   </Routes>
                   </ModuleManager>
                 </div>

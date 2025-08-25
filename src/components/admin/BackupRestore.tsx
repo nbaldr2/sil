@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../App';
 import { backupService, BackupData, BackupSettings, BackupStats } from '../../services/backupService';
+import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 
 export const BackupRestore = () => {
   const { language } = useAuth();
@@ -35,6 +36,12 @@ export const BackupRestore = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [backupDescription, setBackupDescription] = useState('');
+  
+  // Confirmation dialog states
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [selectedBackup, setSelectedBackup] = useState<BackupData | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const t = {
     fr: {
@@ -264,15 +271,22 @@ export const BackupRestore = () => {
     }
   };
 
-  const handleRestore = async (backup: BackupData) => {
-    if (!window.confirm(t.confirmRestore)) return;
+  const handleRestore = (backup: BackupData) => {
+    setSelectedBackup(backup);
+    setShowRestoreConfirm(true);
+  };
+
+  const confirmRestore = async () => {
+    if (!selectedBackup) return;
     
-    setLoading(true);
+    setConfirmLoading(true);
     setError('');
     try {
-      const result = await backupService.restoreBackup(backup.id);
+      const result = await backupService.restoreBackup(selectedBackup.id);
       if (result.success) {
         setSuccess(t.restoreSuccess);
+        setShowRestoreConfirm(false);
+        setSelectedBackup(null);
         setTimeout(() => setSuccess(''), 3000);
       } else {
         throw new Error(result.message);
@@ -280,20 +294,30 @@ export const BackupRestore = () => {
     } catch (error: any) {
       setError(error.message || 'Failed to restore backup');
     } finally {
-      setLoading(false);
+      setConfirmLoading(false);
     }
   };
 
-  const handleDelete = async (backup: BackupData) => {
-    if (!window.confirm(t.confirmDelete)) return;
+  const handleDelete = (backup: BackupData) => {
+    setSelectedBackup(backup);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedBackup) return;
     
+    setConfirmLoading(true);
     try {
-      await backupService.deleteBackup(backup.id);
+      await backupService.deleteBackup(selectedBackup.id);
       setSuccess(t.deleteSuccess);
+      setShowDeleteConfirm(false);
+      setSelectedBackup(null);
       await loadData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error: any) {
       setError(error.message || 'Failed to delete backup');
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -801,6 +825,37 @@ export const BackupRestore = () => {
           </div>
         </div>
       )}
+
+      {/* Confirmation Dialogs */}
+      <ConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setSelectedBackup(null);
+        }}
+        onConfirm={confirmDelete}
+        title={language === 'fr' ? 'Supprimer la sauvegarde' : 'Delete Backup'}
+        message={t.confirmDelete}
+        confirmText={t.delete}
+        cancelText={t.cancel}
+        type="danger"
+        loading={confirmLoading}
+      />
+
+      <ConfirmationDialog
+        isOpen={showRestoreConfirm}
+        onClose={() => {
+          setShowRestoreConfirm(false);
+          setSelectedBackup(null);
+        }}
+        onConfirm={confirmRestore}
+        title={language === 'fr' ? 'Restaurer la sauvegarde' : 'Restore Backup'}
+        message={t.confirmRestore}
+        confirmText={t.restore}
+        cancelText={t.cancel}
+        type="warning"
+        loading={confirmLoading}
+      />
     </div>
   );
 };

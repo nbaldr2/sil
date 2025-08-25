@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Home,
@@ -36,7 +36,7 @@ import { useModuleManager } from './ModuleManager';
 
 interface NavItem {
   id: string;
-  label: string;
+  label: React.ReactNode;
   icon: React.ReactNode;
   path: string;
   roles: string[];
@@ -53,10 +53,13 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const { getActiveMenuItems } = useModuleManager();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [stockModuleAccess, setStockModuleAccess] = useState<ModuleAccess | null>(null);
+  const [analyticsModuleAccess, setAnalyticsModuleAccess] = useState<ModuleAccess | null>(null);
   const [loadingModules, setLoadingModules] = useState(false);
 
   const t = {
     fr: {
+      analyticsBasic: 'Analytics',
+      analyticsPro: 'Analytics Pro',
       dashboard: 'Tableau de bord',
       patients: 'Patients',
       doctors: 'Médecins',
@@ -88,6 +91,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
       qualityControl: 'Contrôle Qualité'
     },
     en: {
+      analyticsBasic: 'Analytics',
+      analyticsPro: 'Analytics Pro',
       dashboard: 'Dashboard',
       patients: 'Patients',
       doctors: 'Doctors',
@@ -120,22 +125,27 @@ export default function Sidebar({ onClose }: SidebarProps) {
     }
   }[language];
 
-  // Check stock module access on component mount and when modules change
+  // Check module access on component mount and when modules change
   useEffect(() => {
-    const checkStockModuleAccess = async () => {
+    const checkModulesAccess = async () => {
       setLoadingModules(true);
       try {
-        const access = await moduleService.checkModuleAccess('stock-manager');
-        setStockModuleAccess(access);
+        const [stockAccess, analyticsAccess] = await Promise.all([
+          moduleService.checkModuleAccess('stock-manager'),
+          moduleService.checkModuleAccess('analytics-pro')
+        ]);
+        setStockModuleAccess(stockAccess);
+        setAnalyticsModuleAccess(analyticsAccess);
       } catch (error) {
-        console.error('Error checking stock module access:', error);
-        setStockModuleAccess({ hasAccess: false, daysRemaining: 0, status: null, expiresAt: null, features: [] });
+        console.error('Error checking module access:', error);
+        if (!stockModuleAccess) setStockModuleAccess({ hasAccess: false, daysRemaining: 0, status: null, expiresAt: null, features: [] });
+        if (!analyticsModuleAccess) setAnalyticsModuleAccess({ hasAccess: false, daysRemaining: 0, status: null, expiresAt: null, features: [] });
       } finally {
         setLoadingModules(false);
       }
     };
 
-    checkStockModuleAccess();
+    checkModulesAccess();
   }, [moduleVersion]); // Refresh when moduleVersion changes
 
   // Create base navigation items
@@ -305,10 +315,40 @@ export default function Sidebar({ onClose }: SidebarProps) {
     ]
   } : null;
 
+  // Conditionally add Analytics Pro if module is licensed
+  const analyticsProNavItem: NavItem | null = loadingModules ? {
+    id: 'analytics-pro-loading',
+    label: (
+      <div className="flex items-center justify-between w-full">
+        <span className="text-gray-400">{t.analyticsPro}</span>
+        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400"></div>
+      </div>
+    ),
+    icon: <BarChart3 size={20} className="text-gray-400" />,
+    path: '#',
+    roles: ['ADMIN', 'BIOLOGIST']
+  } : (analyticsModuleAccess?.hasAccess || user?.role === 'ADMIN') ? {
+    id: 'analytics-pro',
+    label: t.analyticsPro,
+    icon: <BarChart3 size={20} />,
+    path: '/modules/analytics-pro',
+    roles: ['ADMIN', 'BIOLOGIST']
+  } : null;
+
   // Combine navigation items
   const navItems: NavItem[] = [
     ...baseNavItems,
     ...(stockNavItem ? [stockNavItem] : []),
+    // Always-visible basic analytics
+    {
+      id: 'analytics-basic',
+      label: t.analyticsBasic,
+      icon: <BarChart3 size={20} />,
+      path: '/analytics',
+      roles: ['ADMIN', 'BIOLOGIST', 'TECHNICIAN', 'SECRETARY']
+    },
+    // Conditionally include Analytics Pro like Stock Manager
+    ...(analyticsProNavItem ? [analyticsProNavItem] : []),
     {
       id: 'billing',
       label: t.billing,
@@ -388,13 +428,37 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const filteredNav = navItems.filter(item => item.roles.includes(user?.role || ''));
   
   // Get dynamic module menu items
-  const moduleMenuItems = getActiveMenuItems().map(item => ({
-    id: `module-${item.path}`,
-    label: item.name[language],
-    icon: <item.icon size={20} />,
-    path: item.path,
-    roles: item.permissions
-  }));
+  // Helper to map icon name strings from backend to lucide components
+  const iconMap: Record<string, any> = {
+    BarChart3,
+    Package,
+    Puzzle,
+    Database
+  };
+
+  const moduleMenuItems = getActiveMenuItems()
+    // If Analytics Pro is already shown in main nav, hide its duplicate from Modules section
+    .filter(item => !(item.path === '/modules/analytics-pro' && analyticsModuleAccess?.hasAccess))
+    .map(item => {
+      let iconNode: React.ReactNode = null;
+      if (typeof item.icon === 'string') {
+        const IconComp = iconMap[item.icon];
+        iconNode = IconComp ? <IconComp size={20} /> : <Package size={20} />;
+      } else if (typeof item.icon === 'function') {
+        const IconComp = item.icon as any;
+        iconNode = <IconComp size={20} />;
+      } else {
+        iconNode = item.icon as React.ReactNode;
+      }
+
+      return {
+        id: `module-${item.path}`,
+        label: item.name[language],
+        icon: iconNode,
+        path: item.path,
+        roles: item.permissions
+      };
+    });
 
   const handleNavigation = () => {
     if (onClose) {

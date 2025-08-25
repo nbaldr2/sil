@@ -64,7 +64,10 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}, retries =
         return apiRequest(endpoint, options, retries - 1);
       }
       
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      // Include more detailed error information if available
+      const errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+      const errorDetails = errorData.details ? `: ${errorData.details}` : '';
+      throw new Error(errorMessage + errorDetails);
     }
 
     const result = await response.json();
@@ -489,6 +492,35 @@ export const pricingService = {
       advancePayment: advancePayment,
       amountDue: amountDue
     };
+  },
+
+  getCurrencySettings: () => {
+    try {
+      const saved = localStorage.getItem('sil_lab_currency');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {
+      console.error('Error loading currency settings:', error);
+    }
+    
+    // Return default currency settings
+    return {
+      symbol: 'dh',
+      code: 'MAD',
+      position: 'after' as 'before' | 'after',
+      decimalPlaces: 2
+    };
+  },
+
+  saveCurrencySettings: (settings: any) => {
+    try {
+      localStorage.setItem('sil_lab_currency', JSON.stringify(settings));
+      return true;
+    } catch (error) {
+      console.error('Error saving currency settings:', error);
+      return false;
+    }
   }
 };
 

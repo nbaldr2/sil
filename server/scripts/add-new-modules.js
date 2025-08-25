@@ -71,6 +71,43 @@ async function addNewModules() {
 
     console.log('✅ Quality Control module added:', qualityModule.id);
 
+    // Analytics Pro Module
+    const analyticsModule = await prisma.module.upsert({
+      where: { name: 'analytics-pro' },
+      update: {},
+      create: {
+        name: 'analytics-pro',
+        displayName: 'Analytics Pro',
+        description: 'Advanced analytics and business intelligence with custom dashboards, KPI tracking, and predictive insights.',
+        version: '1.0.0',
+        author: 'SIL Lab Team',
+        category: 'analytics',
+        price: 499.99, // Premium module
+        features: [
+          'Custom dashboard builder',
+          'Advanced KPI tracking',
+          'Predictive analytics',
+          'Real-time data visualization',
+          'Business intelligence reports',
+          'Trend analysis and forecasting',
+          'Performance metrics monitoring',
+          'Data export and integration',
+          'Interactive charts and graphs',
+          'Automated report generation',
+          'Multi-dimensional data analysis',
+          'Comparative analytics'
+        ],
+        requirements: {
+          minVersion: '1.0.0',
+          permissions: ['ADMIN', 'MANAGER', 'ANALYST'],
+          dependencies: []
+        },
+        isActive: true
+      }
+    });
+
+    console.log('✅ Analytics Pro module added:', analyticsModule.id);
+
     // Create demo licenses for testing
     console.log('\n🔑 Creating demo licenses...');
 
@@ -124,15 +161,41 @@ async function addNewModules() {
 
     console.log('✅ Quality Control trial license:', qualityLicense.licenseKey);
 
+    // Demo license for Analytics Pro (trial)
+    const analyticsLicense = await prisma.moduleLicense.create({
+      data: {
+        moduleId: analyticsModule.id,
+        licenseKey: 'ANALYTICS-TRIAL-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+        organizationName: 'Demo Organization',
+        contactEmail: 'demo@sil-lab.ma',
+        status: 'TRIAL',
+        activatedAt: new Date(),
+        expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days trial
+        maxUsers: 5,
+        features: [
+          'Custom dashboard builder',
+          'Advanced KPI tracking',
+          'Real-time data visualization',
+          'Business intelligence reports',
+          'Trend analysis and forecasting',
+          'Performance metrics monitoring'
+        ]
+      }
+    });
+
+    console.log('✅ Analytics Pro trial license:', analyticsLicense.licenseKey);
+
     console.log('\n🎉 New modules added successfully!');
     console.log('\n📋 Module Summary:');
     console.log('1. Backup Manager (Free) - Fully activated');
     console.log('2. Quality Control (Premium) - 30-day trial');
+    console.log('3. Analytics Pro (Premium) - 14-day trial');
     
     console.log('\n🌐 Access URLs:');
-    console.log('- Module Store: http://localhost:5175/modules');
+    console.log('- Module Store: http://localhost:5175/config/modules');
     console.log('- Backup Manager: http://localhost:5175/config/backup');
     console.log('- Quality Control: http://localhost:5175/quality-control');
+    console.log('- Analytics Pro: http://localhost:5175/analytics-pro');
 
   } catch (error) {
     console.error('❌ Error adding modules:', error);

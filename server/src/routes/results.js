@@ -234,7 +234,8 @@ router.put('/:id', updateResultValidation, async (req, res) => {
         reference,
         status,
         notes,
-        validatedAt: status === 'VALIDATED' ? new Date() : null
+        validatedAt: status === 'VALIDATED' ? new Date() : null,
+        validatedBy: status === 'VALIDATED' ? 'system-update' : null
       },
       include: {
         request: {
@@ -263,6 +264,11 @@ router.put('/:id', updateResultValidation, async (req, res) => {
       }
     });
 
+    // If the status was changed to VALIDATED, update the request status
+    if (status === 'VALIDATED') {
+      await updateRequestStatusBasedOnResults(result.request.id);
+    }
+
     res.json({ result });
 
   } catch (error) {
@@ -270,6 +276,33 @@ router.put('/:id', updateResultValidation, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// Helper function to check and update request status
+async function updateRequestStatusBasedOnResults(requestId) {
+  try {
+    // Get all results for this request
+    const results = await prisma.result.findMany({
+      where: { requestId }
+    });
+    
+    // If there are no results, don't change the status
+    if (results.length === 0) return;
+    
+    // Check if all results are validated
+    const allValidated = results.every(result => result.status === 'VALIDATED');
+    
+    // If all results are validated, update the request status to COMPLETED
+    if (allValidated) {
+      await prisma.request.update({
+        where: { id: requestId },
+        data: { status: 'COMPLETED' }
+      });
+      console.log(`Request ${requestId} status updated to COMPLETED`);
+    }
+  } catch (error) {
+    console.error(`Error updating request status: ${error}`);
+  }
+}
 
 // Validate result
 router.patch('/:id/validate', [
@@ -317,6 +350,9 @@ router.patch('/:id/validate', [
         analysis: true
       }
     });
+
+    // Update the request status if all results are validated
+    await updateRequestStatusBasedOnResults(result.request.id);
 
     res.json({ result });
 

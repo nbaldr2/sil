@@ -7,15 +7,15 @@ const prisma = new PrismaClient();
 
 // Validation middleware
 const requestValidation = [
-  body('patientId').isLength({ min: 1 }),
+  body('patientId').notEmpty().withMessage('Patient ID is required').isLength({ min: 1 }),
   body('doctorId').optional().isLength({ min: 1 }),
-  body('appointmentDate').isLength({ min: 1 }),
-  body('appointmentTime').isLength({ min: 1 }),
+  body('appointmentDate').optional().isISO8601().withMessage('Valid date format required (YYYY-MM-DD)'),
+  body('appointmentTime').optional().matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid time format required (HH:MM)'),
   body('sampleType').optional().isIn(['BLOOD', 'URINE', 'SALIVA', 'STOOL', 'SPUTUM', 'CEREBROSPINAL_FLUID', 'SYNOVIAL_FLUID', 'PLEURAL_FLUID', 'PERITONEAL_FLUID', 'OTHER']),
   body('tubeType').optional().isIn(['EDTA', 'CITRATE', 'HEPARIN', 'SERUM', 'PLAIN', 'FLUORIDE', 'OTHER']),
-  body('analyses').isArray({ min: 1 }),
-  body('analyses.*.analysisId').isLength({ min: 1 }),
-  body('analyses.*.price').isFloat({ min: 0 })
+  body('analyses').isArray({ min: 1 }).withMessage('At least one analysis is required'),
+  body('analyses.*.analysisId').isLength({ min: 1 }).withMessage('Analysis ID is required'),
+  body('analyses.*.price').isFloat({ min: 0 }).withMessage('Price must be a positive number')
 ];
 
 // Get all requests
@@ -197,33 +197,23 @@ router.post('/', requestValidation, async (req, res) => {
       analyses 
     } = req.body;
 
-    // Get the current user ID from the request (assuming it's set by auth middleware)
-    // For now, use a default user ID or get from token
-    let createdById = req.user?.id;
+    // Validate that patient exists
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId }
+    });
     
-    if (!createdById) {
-      // Try to get user from token
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      if (token) {
-        try {
-          const jwt = require('jsonwebtoken');
-          const decoded = jwt.verify(token, process.env.JWT_SECRET);
-          createdById = decoded.userId;
-        } catch (error) {
-          console.error('Token verification failed:', error);
-        }
-      }
+    if (!patient) {
+      return res.status(404).json({ error: 'Patient not found' });
     }
-    
-    // If still no user ID, use a default admin user
-    if (!createdById) {
-      const defaultUser = await prisma.user.findFirst({
-        where: { role: 'ADMIN' }
+
+    // Validate that doctor exists (if provided)
+    if (doctorId) {
+      const doctor = await prisma.doctor.findUnique({
+        where: { id: doctorId }
       });
-      if (defaultUser) {
-        createdById = defaultUser.id;
-      } else {
-        return res.status(400).json({ error: 'No valid user found for request creation' });
+      
+      if (!doctor) {
+        return res.status(404).json({ error: 'Doctor not found' });
       }
     }
 
@@ -252,21 +242,25 @@ router.post('/', requestValidation, async (req, res) => {
           totalAmount,
           amountDue,
           notes,
-          createdById
+          // Add createdBy relation using the authenticated user
+          createdById: req.user.id
         }
       });
 
       // Create request analyses
       const requestAnalyses = await Promise.all(
-        analyses.map(analysis => 
-          tx.requestAnalysis.create({
+        analyses.map(analysis => {
+          // Remove tva field if it exists since it's not in the database schema
+          const { tva, ...analysisData } = analysis;
+          
+          return tx.requestAnalysis.create({
             data: {
               requestId: newRequest.id,
               analysisId: analysis.analysisId,
               price: analysis.price
             }
-          })
-        )
+          });
+        })
       );
 
       // Create result records for each analysis (for biologist validation)
@@ -307,7 +301,8 @@ router.post('/', requestValidation, async (req, res) => {
 
   } catch (error) {
     console.error('Create request error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Request body:', req.body);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 

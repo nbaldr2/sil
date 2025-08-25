@@ -27,8 +27,13 @@ const stockRoutes = require('./routes/stock');
 const pluginRoutes = require('./routes/plugins');
 const automateRoutes = require('./routes/automates');
 const moduleRoutes = require('./routes/modules');
+const moduleManifestRoutes = require('./routes/module-manifest');
 const adminRoutes = require('./routes/admin');
- 
+
+// Middleware
+const { authenticateToken, requireAdmin } = require('./middleware/auth');
+const { logger, requestLogger, errorLogger } = require('./utils/logger');
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -53,7 +58,21 @@ app.use(cors({
 app.use(morgan('combined'));
 app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Add request logging
+app.use(requestLogger);
+
+// Add payload size validation middleware
+const validatePayloadSize = (req, res, next) => {
+  const contentLength = req.get('Content-Length');
+  if (contentLength && parseInt(contentLength) > 10 * 1024 * 1024) { // 10MB
+    return res.status(413).json({ error: 'Payload too large' });
+  }
+  next();
+};
+
+app.use(validatePayloadSize);
 
 // Swagger Configuration
 const swaggerOptions = {
@@ -98,39 +117,45 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: t
 app.get('/api/health', async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: 'ok', timestamp: new Date().toISOString(), database: 'connected' });
-  } catch {
-    res.status(500).json({ status: 'error', database: 'disconnected' });
+    res.json({ 
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      database: 'connected',
+      version: process.env.npm_package_version || '1.0.0'
+    });
+  } catch (error) {
+    res.status(503).json({ 
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      database: 'disconnected',
+      error: error.message
+    });
   }
 });
 
 // API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/patients', patientRoutes);
-app.use('/api/doctors', doctorRoutes);
-app.use('/api/analyses', analysisRoutes);
-app.use('/api/requests', requestRoutes);
-app.use('/api/results', resultRoutes);
-app.use('/api/config', configRoutes);
-app.use('/api/stock', stockRoutes);
-app.use('/api/plugins', pluginRoutes);
-app.use('/api/automates', automateRoutes);
-app.use('/api/modules', moduleRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/patients', authenticateToken, patientRoutes);
+app.use('/api/doctors', authenticateToken, doctorRoutes);
+app.use('/api/analyses', authenticateToken, analysisRoutes);
+app.use('/api/requests', authenticateToken, requestRoutes);
+app.use('/api/results', authenticateToken, resultRoutes);
+app.use('/api/config', authenticateToken, configRoutes);
+app.use('/api/stock', authenticateToken, stockRoutes);
+app.use('/api/plugins', authenticateToken, requireAdmin, pluginRoutes);
+app.use('/api/automates', authenticateToken, automateRoutes);
+app.use('/api/modules', authenticateToken, moduleRoutes);
+// Module manifest and analytics
+app.use('/api/modules/manifest', authenticateToken, moduleManifestRoutes);
+app.use('/api/analytics', authenticateToken, moduleManifestRoutes);
+app.use('/api/admin', authenticateToken, requireAdmin, adminRoutes);
 
 // Error Handling
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    error: 'Something went wrong!',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
-  });
-});
-
-// 404 Handler
-app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
+app.use(errorLogger); // Log request errors
+app.use(notFoundHandler); // Handle 404 errors
+app.use(errorHandler); // Global error handler
 
 // Graceful Shutdown
 process.on('SIGINT', async () => {

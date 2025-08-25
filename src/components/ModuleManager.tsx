@@ -11,6 +11,7 @@ import {
   Star
 } from 'lucide-react';
 import { useAuth } from '../App';
+import { useModules } from '../contexts/ModuleContext';
 import { moduleService, Module, ModuleLicense } from '../services/moduleService';
 import { 
   moduleRegistry, 
@@ -39,17 +40,34 @@ export const ModuleManager: React.FC<ModuleManagerProps> = ({ children }) => {
   const { user, language } = useAuth();
   const [installedModules, setInstalledModules] = useState<ModuleLicense[]>([]);
   const [loading, setLoading] = useState(true);
+  const [accessMap, setAccessMap] = useState<Record<string, boolean>>({});
+  const [analyticsProHasAccess, setAnalyticsProHasAccess] = useState<boolean>(false);
+  const { moduleVersion } = useModules();
 
   useEffect(() => {
     loadInstalledModules();
-  }, []);
+  }, [moduleVersion]);
 
   const loadInstalledModules = async () => {
     try {
+      // Check authentication status before making the request
+      const authStatus = moduleService.checkAuthenticationStatus();
+      if (!authStatus.isAuthenticated) {
+        console.warn('User not authenticated, skipping module loading');
+        return;
+      }
+
       const modules = await moduleService.getInstalledModules();
       setInstalledModules(modules);
     } catch (error) {
       console.error('Error loading installed modules:', error);
+      
+      // Handle authentication errors
+      if (error instanceof Error && error.message.includes('Authentication')) {
+        console.warn('Authentication error in module loading. User may need to re-login.');
+        // Check current auth status for debugging
+        moduleService.checkAuthenticationStatus();
+      }
     } finally {
       setLoading(false);
     }
@@ -57,9 +75,9 @@ export const ModuleManager: React.FC<ModuleManagerProps> = ({ children }) => {
 
   // Get active module routes based on installed modules and user permissions
   const getActiveRoutes = () => {
-    if (!user) return [];
+    if (!user) return [] as { path: string; component: React.ComponentType<any> }[];
 
-    return getModuleRoutes(user.role).filter(route => {
+    const routes = getModuleRoutes(user.role).filter(route => {
       // Check if module is installed and active
       const moduleId = Object.keys(moduleRegistry).find(id => {
         const module = getModule(id);
@@ -71,6 +89,13 @@ export const ModuleManager: React.FC<ModuleManagerProps> = ({ children }) => {
       // Check if module is installed and accessible
       return isModuleAccessible(moduleId, installedModules) && hasModuleAccess(moduleId, user.role);
     });
+
+    // Fallback: if Analytics Pro has access (via API) but not in installed list yet, still expose its route
+    if (analyticsProHasAccess && !routes.some(r => r.path === '/modules/analytics-pro')) {
+      routes.push({ path: '/modules/analytics-pro', component: getModule('analytics-pro')!.routes[0].component });
+    }
+
+    return routes;
   };
 
   // Get active menu items
@@ -124,9 +149,13 @@ export const ModuleManager: React.FC<ModuleManagerProps> = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <>
+        {children}
+        {/* Keep router mounted so /modules/* still matches while loading */}
+        <Routes>
+          {/* Placeholder; real module routes mount after load */}
+        </Routes>
+      </>
     );
   }
 
@@ -159,10 +188,24 @@ export const useModuleManager = () => {
 
   const loadInstalledModules = async () => {
     try {
+      // Check authentication status before making the request
+      const authStatus = moduleService.checkAuthenticationStatus();
+      if (!authStatus.isAuthenticated) {
+        console.warn('User not authenticated, skipping module loading');
+        return;
+      }
+
       const modules = await moduleService.getInstalledModules();
       setInstalledModules(modules);
     } catch (error) {
       console.error('Error loading installed modules:', error);
+      
+      // Handle authentication errors
+      if (error instanceof Error && error.message.includes('Authentication')) {
+        console.warn('Authentication error in module loading. User may need to re-login.');
+        // Check current auth status for debugging
+        moduleService.checkAuthenticationStatus();
+      }
     } finally {
       setLoading(false);
     }

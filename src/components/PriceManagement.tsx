@@ -198,7 +198,7 @@ export default function PriceManagement() {
   const handleSave = () => {
     try {
       pricingService.savePrices(analysisPrices);
-      localStorage.setItem('sil_lab_currency', JSON.stringify(currencySettings));
+      pricingService.saveCurrencySettings(currencySettings);
       alert(t.success);
     } catch (error) {
       console.error('Save error:', error);

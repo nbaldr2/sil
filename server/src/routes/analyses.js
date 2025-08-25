@@ -7,11 +7,12 @@ const prisma = new PrismaClient();
 
 // Validation middleware
 const analysisValidation = [
-  body('code').isLength({ min: 2 }).trim(),
-  body('nom').isLength({ min: 2 }).trim(),
-  body('category').isLength({ min: 2 }).trim(),
-  body('price').isFloat({ min: 0 }),
-  body('tva').isFloat({ min: 0, max: 100 }).optional()
+  body('code').notEmpty().withMessage('Code is required').isLength({ min: 2 }).trim(),
+  body('nom').notEmpty().withMessage('Name is required').isLength({ min: 2 }).trim(),
+  body('category').notEmpty().withMessage('Category is required').isLength({ min: 2 }).trim(),
+  body('price').notEmpty().withMessage('Price is required').isFloat({ min: 0 }).withMessage('Price must be a positive number'),
+  body('tva').optional().isFloat({ min: 0, max: 100 }).withMessage('TVA must be between 0 and 100'),
+  body('cost').optional().isFloat({ min: 0 }).withMessage('Cost must be a positive number')
 ];
 
 // Get all analyses
@@ -103,38 +104,60 @@ router.get('/:id', async (req, res) => {
 // Create analysis
 router.post('/', analysisValidation, async (req, res) => {
   try {
+    console.log('Creating analysis with data:', req.body);
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        details: errors.array()
+      });
     }
 
-    const { code, nom, category, price, tva = 20, cost } = req.body;
+    const { code, nom, category, price, tva = 20, cost = 0, description } = req.body;
 
-    // Check if analysis with same code already exists
-    const existingAnalysis = await prisma.analysis.findUnique({
+    // Validate required fields
+    if (!code || !nom || !category || !price) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        required: ['code', 'nom', 'category', 'price']
+      });
+    }
+
+    // Check for existing code
+    const existing = await prisma.analysis.findUnique({
       where: { code }
     });
-
-    if (existingAnalysis) {
-      return res.status(400).json({ error: 'Analysis with this code already exists' });
+    
+    if (existing) {
+      return res.status(409).json({ 
+        error: 'Analysis already exists with this code' 
+      });
     }
 
     const analysis = await prisma.analysis.create({
       data: {
         code,
-        nom,
+        name: nom, // Schema uses 'name' not 'nom'
         category,
-        price,
-        tva,
-        cost
+        price: parseFloat(price),
+        tva: parseFloat(tva),
+        cost: parseFloat(cost),
+        description
       }
     });
 
-    res.status(201).json({ analysis });
+    res.status(201).json({ 
+      analysis,
+      message: 'Analysis created successfully' 
+    });
 
   } catch (error) {
-    console.error('Create analysis error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Analysis creation error:', error);
+    res.status(500).json({ 
+      error: 'Failed to create analysis',
+      details: error.message 
+    });
   }
 });
 
@@ -173,11 +196,11 @@ router.put('/:id', analysisValidation, async (req, res) => {
       where: { id },
       data: {
         code,
-        nom,
+        name: nom, // Schema uses 'name' not 'nom'
         category,
-        price,
-        tva,
-        cost
+        price: parseFloat(price),
+        tva: parseFloat(tva || 20),
+        cost: parseFloat(cost || 0)
       }
     });
 

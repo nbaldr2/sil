@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, CheckCircle, AlertCircle, Check, X, Eye, RefreshCw } from 'lucide-react';
+import { Search, CheckCircle, AlertCircle, AlertTriangle, Check, X, Eye, RefreshCw } from 'lucide-react';
 import { useAuth } from '../App';
 import { resultsService } from '../services/integrations';
 
@@ -41,6 +41,9 @@ export default function BiologistValidation() {
   const [showModal, setShowModal] = useState(false);
   const [validating, setValidating] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   const t = {
     fr: {
@@ -113,6 +116,13 @@ export default function BiologistValidation() {
     }
   }[language];
 
+  const showToastNotification = (message: string, type: 'success' | 'error') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 4000);
+  };
+
   useEffect(() => {
     loadResults();
   }, []);
@@ -122,9 +132,11 @@ export default function BiologistValidation() {
       setLoading(true);
       setError(null);
       
+      // Only fetch results with PENDING status that need validation
       const response = await resultsService.getResults({
         limit: 100,
-        include: 'request,analysis'
+        include: 'request,analysis',
+        status: 'PENDING'
       });
       
       setResults(response.results || []);
@@ -170,10 +182,10 @@ export default function BiologistValidation() {
         setSelectedResult(null);
       }
       
-      alert(t.validationSuccess);
+      showToastNotification(t.validationSuccess, 'success');
     } catch (error) {
       console.error('Error validating result:', error);
-      alert(t.validationError);
+      showToastNotification(t.validationError, 'error');
     } finally {
       setValidating(null);
     }
@@ -197,10 +209,10 @@ export default function BiologistValidation() {
         setSelectedResult(null);
       }
       
-      alert(t.rejectionSuccess);
+      showToastNotification(t.rejectionSuccess, 'success');
     } catch (error) {
       console.error('Error rejecting result:', error);
-      alert(t.rejectionError);
+      showToastNotification(t.rejectionError, 'error');
     } finally {
       setValidating(null);
     }
@@ -498,6 +510,25 @@ export default function BiologistValidation() {
 
       {/* Result Detail Modal */}
       {showModal && <ResultModal />}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg flex items-center z-50 ${
+          toastType === 'success' 
+            ? 'bg-green-600 text-white' 
+            : 'bg-red-600 text-white'
+        }`}>
+          {toastType === 'success' ? (
+            <CheckCircle size={20} className="mr-2" />
+          ) : (
+            <AlertTriangle size={20} className="mr-2" />
+          )}
+          {toastMessage}
+          <button onClick={() => setShowToast(false)} className="ml-4">
+            <X size={16} />
+          </button>
+        </div>
+      )}
     </div>
   );
 } 

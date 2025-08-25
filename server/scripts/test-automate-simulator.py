@@ -176,7 +176,7 @@ class DBClient:
             print(f"[DB] Ensure request failed: {e}")
             return None
 
-    def upsert_result(self, request_id, analysis_id, value: str, unit: str = None, reference: str = None, status: str = 'VALIDATED'):
+    def upsert_result(self, request_id, analysis_id, value: str, unit: str = None, reference: str = None, status: str = 'PENDING'):
         if not self.available:
             return False
         try:
@@ -187,16 +187,36 @@ class DBClient:
                 )
                 row = cur.fetchone()
                 if row:
-                    cur.execute(
-                        'UPDATE "Result" SET value=%s, unit=%s, reference=%s, status=%s, "validatedAt"=NOW(), "updatedAt"=NOW() WHERE id=%s',
-                        (value, unit, reference, status, row[0])
-                    )
+                    # For PENDING status, don't set validatedAt or validatedBy
+                    if status == 'PENDING':
+                        cur.execute(
+                            'UPDATE "Result" SET value=%s, unit=%s, reference=%s, status=%s, "validatedAt"=NULL, "validatedBy"=NULL, "updatedAt"=NOW() WHERE id=%s',
+                            (value, unit, reference, status, row[0])
+                        )
+                    else:
+                        cur.execute(
+                            'UPDATE "Result" SET value=%s, unit=%s, reference=%s, status=%s, "validatedAt"=NOW(), "validatedBy"=%s, "updatedAt"=NOW() WHERE id=%s',
+                            (value, unit, reference, status, 'system', row[0])
+                        )
                 else:
-                    cur.execute(
-                        'INSERT INTO "Result" ("requestId","analysisId",value,unit,reference,status,"validatedAt","updatedAt")\n'
-                        'VALUES (%s,%s,%s,%s,%s,%s,NOW(),NOW())',
-                        (request_id, analysis_id, value, unit, reference, status)
-                    )
+                    # For PENDING status, don't set validatedAt or validatedBy
+                    if status == 'PENDING':
+                        # For PENDING status, don't include validatedAt or validatedBy in the INSERT
+                        # Generate a new UUID for the result
+                        result_id = str(uuid.uuid4())
+                        cur.execute(
+                            'INSERT INTO "Result" ("id","requestId","analysisId",value,unit,reference,status,"updatedAt")\n'
+                            'VALUES (%s,%s,%s,%s,%s,%s,%s,NOW())',
+                            (result_id, request_id, analysis_id, value, unit, reference, status)
+                        )
+                    else:
+                        # Generate a new UUID for the result
+                        result_id = str(uuid.uuid4())
+                        cur.execute(
+                            'INSERT INTO "Result" ("id","requestId","analysisId",value,unit,reference,status,"validatedAt","validatedBy","updatedAt")\n'
+                            'VALUES (%s,%s,%s,%s,%s,%s,%s,NOW(),%s,NOW())',
+                            (result_id, request_id, analysis_id, value, unit, reference, status, 'system')
+                        )
                 return True
         except Exception as e:
             print(f"[DB] Upsert result failed: {e}")
@@ -286,9 +306,9 @@ def create_random_request_and_result():
             cur.execute('INSERT INTO "RequestAnalysis" ("id","requestId","analysisId","price") VALUES (%s,%s,%s,%s)',
                         (ra_id, request_id, analysis_id, float(analysis_price)))
 
-        # Create random numeric result and validate
+        # Create random numeric result (pending validation)
         value = round(random.uniform(0.1, 250.0), 2)
-        _DB.upsert_result(request_id, analysis_id, str(value), unit=None, reference=None, status='VALIDATED')
+        _DB.upsert_result(request_id, analysis_id, str(value), unit=None, reference=None)
 
         # Build HL7 ORU for the same patient/request with the chosen analysis
         hl7 = HL7Message()
@@ -332,7 +352,7 @@ def create_random_request_and_result():
         print(f"Patient ID: {patient_id} | Name: {fn} {ln} | DOB: {dob} | Gender: {gender} | Email: {email} | CNSS: {cnss}")
         print(f"Request ID: {request_id} | Status: IN_PROGRESS | Priority: NORMAL")
         print(f"Analysis: {analysis_code} - {analysis_name} | Price: {analysis_price}")
-        print(f"Result: {value} (VALIDATED)")
+        print(f"Result: {value} (PENDING VALIDATION)")
         print(f"Transfer Log: {status} | Duration: {duration_ms} ms | Error: {error}")
         print("\nHL7 message sent:")
         print("-" * 80)
@@ -542,10 +562,10 @@ def send_hl7_message(host=None, port=None):
                     selected_analysis['id'],
                     str(demo_value),
                     unit=None,
-                    reference=None,
-                    status='VALIDATED'
+                    reference=None
+                    # Using default status 'PENDING' to require validation
                 )
-                print(f"[DB] Result upserted for analysis {selected_analysis['code']} on request {linked_request_id}: {demo_value}")
+                print(f"[DB] Result upserted for analysis {selected_analysis['code']} on request {linked_request_id}: {demo_value} (PENDING VALIDATION)")
             except Exception as e:
                 print(f"[DB] Failed to upsert result: {e}")
 

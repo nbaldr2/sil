@@ -40,10 +40,42 @@ export interface ModuleAccess {
 }
 
 class ModuleService {
+  // Helper method to check if user is authenticated
+  private isAuthenticated(): boolean {
+    const token = localStorage.getItem('sil_lab_token');
+    const user = localStorage.getItem('sil_lab_user');
+    return !!(token && user);
+  }
+
+  // Helper method to get current user info
+  private getCurrentUser() {
+    try {
+      const userData = localStorage.getItem('sil_lab_user');
+      return userData ? JSON.parse(userData) : null;
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      return null;
+    }
+  }
+
   private async apiRequest(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
+    const token = localStorage.getItem('sil_lab_token');
+    
+    // Enhanced token validation
+    if (!token) {
+      console.error('No authentication token found. User may need to log in.');
+      console.error('Current authentication status:', {
+        hasToken: !!token,
+        hasUser: !!localStorage.getItem('sil_lab_user'),
+        currentUser: this.getCurrentUser()
+      });
+      throw new Error('Authentication required. Please log in.');
+    }
+
     const headers = {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
       ...options.headers,
     };
 
@@ -55,6 +87,16 @@ class ModuleService {
 
       if (!response.ok) {
         console.error(`API Error: ${response.status} ${response.statusText} for ${url}`);
+        
+        // Handle authentication errors specifically
+        if (response.status === 401) {
+          console.error('Authentication failed. Token may be expired or invalid.');
+          // Clear invalid token
+          localStorage.removeItem('sil_lab_token');
+          localStorage.removeItem('sil_lab_user');
+          throw new Error('Authentication failed. Please log in again.');
+        }
+        
         const error = await response.json().catch(() => ({}));
         throw new Error(error.error || `HTTP error! status: ${response.status}`);
       }
@@ -150,6 +192,52 @@ class ModuleService {
     if (daysRemaining <= 7) return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
     if (daysRemaining <= 30) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
     return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+  }
+
+  // Public method to check authentication status
+  checkAuthenticationStatus() {
+    const token = localStorage.getItem('sil_lab_token');
+    const user = localStorage.getItem('sil_lab_user');
+    const currentUser = this.getCurrentUser();
+    
+    console.log('Authentication Status Check:', {
+      hasToken: !!token,
+      tokenLength: token?.length || 0,
+      hasUser: !!user,
+      currentUser: currentUser,
+      isAuthenticated: this.isAuthenticated()
+    });
+    
+    return {
+      isAuthenticated: this.isAuthenticated(),
+      hasToken: !!token,
+      hasUser: !!user,
+      currentUser
+    };
+  }
+
+  // Test authentication with the server
+  async testAuthentication() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('sil_lab_token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Authentication test successful:', data);
+        return { success: true, data };
+      } else {
+        console.error('Authentication test failed:', response.status, response.statusText);
+        return { success: false, status: response.status, statusText: response.statusText };
+      }
+    } catch (error) {
+      console.error('Authentication test error:', error);
+      return { success: false, error: error.message };
+    }
   }
 }
 

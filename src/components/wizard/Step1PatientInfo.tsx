@@ -144,7 +144,9 @@ export default function Step1PatientInfo({ data, updateData, language }: Step1Pa
               value={data.phone}
               onChange={(e) => handleInputChange('phone', e.target.value)}
               className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="+212-6-12-345678"
+              placeholder="+212612345678"
+              pattern="[0-9+\-\s]+"
+              title={t.invalidPhone}
               required
             />
             <Phone className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />

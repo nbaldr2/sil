@@ -17,6 +17,7 @@ import { useAuth } from '../App';
 import { resultsService, requestsService } from '../services/integrations';
 import ResultReport from './ResultReport';
 import { generateResultPDF } from '../utils/pdfGenerator';
+import { useLocation } from 'react-router-dom';
 
 interface Result {
   id: string;
@@ -33,16 +34,17 @@ interface Result {
   };
   request: {
     id: string;
+    patientId: string;
     patient: {
-    firstName: string;
-    lastName: string;
-    dateOfBirth: string;
+      firstName: string;
+      lastName: string;
+      dateOfBirth: string;
       gender: string;
-    cnssNumber?: string;
-  };
-  doctor?: {
-    firstName: string;
-    lastName: string;
+      cnssNumber?: string;
+    };
+    doctor?: {
+      firstName: string;
+      lastName: string;
       specialty?: string;
     };
     createdAt: string;
@@ -60,6 +62,7 @@ interface SearchFilters {
 
 export default function ResultEntryPage() {
   const { language } = useAuth();
+  const location = useLocation();
   const [results, setResults] = useState<Result[]>([]);
   const [filteredResults, setFilteredResults] = useState<Result[]>([]);
   const [selectedResult, setSelectedResult] = useState<Result | null>(null);
@@ -68,11 +71,17 @@ export default function ResultEntryPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  
+  // Get query parameters from URL
+  const queryParams = new URLSearchParams(location.search);
+  const patientIdFromUrl = queryParams.get('patientId');
+  const requestIdFromUrl = queryParams.get('requestId');
+  
   const [filters, setFilters] = useState<SearchFilters>({
     patientName: '',
-    patientId: '',
+    patientId: patientIdFromUrl || '',
     cnssNumber: '',
-    requestId: '',
+    requestId: requestIdFromUrl || '',
     status: '',
     analysisCode: ''
   });
@@ -170,21 +179,67 @@ export default function ResultEntryPage() {
     loadResults();
   }, []);
 
+  // Apply filters when results change or filters change
   useEffect(() => {
     filterResults();
   }, [results, filters]);
+  
+  // Apply filters from URL when component mounts
+  useEffect(() => {
+    // Apply filters from URL parameters
+    const updatedFilters: Partial<SearchFilters> = {};
+    
+    if (patientIdFromUrl) {
+      updatedFilters.patientId = patientIdFromUrl;
+    }
+    
+    if (requestIdFromUrl) {
+      updatedFilters.requestId = requestIdFromUrl;
+    }
+    
+    // Only update if we have filters to apply
+    if (Object.keys(updatedFilters).length > 0) {
+      setFilters(prev => ({
+        ...prev,
+        ...updatedFilters
+      }));
+    }
+  }, [patientIdFromUrl, requestIdFromUrl]);
 
   const loadResults = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      const response = await resultsService.getResults({
+      // If we have a patient ID from URL, we'll use it to filter results
+      const params: any = {
         limit: 100,
         include: 'request,analysis'
-      });
+      };
       
+      // Add URL parameters to the API request
+      if (patientIdFromUrl) {
+        // The API expects 'patient' parameter for filtering by patient ID
+        params.patient = patientIdFromUrl;
+        console.log('Filtering results by patient ID:', patientIdFromUrl);
+      }
+      
+      if (requestIdFromUrl) {
+        // Add request ID filter
+        params.request = requestIdFromUrl;
+        console.log('Filtering results by request ID:', requestIdFromUrl);
+      }
+      
+      const response = await resultsService.getResults(params);
+      
+      // Set the results
       setResults(response.results || []);
+      
+      // If we have a patient ID, update the page title to show we're viewing a specific patient's results
+      if (patientIdFromUrl && response.results && response.results.length > 0) {
+        const patient = response.results[0].request.patient;
+        document.title = `${patient.firstName} ${patient.lastName} - ${t.title}`;
+      }
     } catch (error) {
       console.error('Error loading results:', error);
       setError(t.error);
@@ -204,9 +259,16 @@ export default function ResultEntryPage() {
     }
 
     if (filters.patientId) {
-      filtered = filtered.filter(result => 
-        result.request.id.toLowerCase().includes(filters.patientId.toLowerCase())
-      );
+      // Filter by patient ID - we need to check if this patient is associated with the request
+      filtered = filtered.filter(result => {
+        // Check if the request has patientId field that matches our filter
+        if (result.request.patientId && result.request.patientId === filters.patientId) {
+          return true;
+        }
+        
+        // Fallback to checking if the request ID contains the patient ID (for backward compatibility)
+        return result.request.id.includes(filters.patientId);
+      });
     }
 
     if (filters.cnssNumber) {
@@ -240,11 +302,12 @@ export default function ResultEntryPage() {
   };
 
   const clearFilters = () => {
+    // Keep URL parameters in the filters when clearing
     setFilters({
       patientName: '',
-      patientId: '',
+      patientId: patientIdFromUrl || '',
       cnssNumber: '',
-      requestId: '',
+      requestId: requestIdFromUrl || '',
       status: '',
       analysisCode: ''
     });
@@ -415,6 +478,42 @@ export default function ResultEntryPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t.title}</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">{t.subtitle}</p>
+          
+          {/* Show filters that are applied from URL */}
+          {(patientIdFromUrl || requestIdFromUrl) && filteredResults.length > 0 && (
+            <div className="mt-2 flex flex-col space-y-1">
+              {/* Show patient name if filtering by patient */}
+              {patientIdFromUrl && (
+                <div className="flex items-center">
+                  <User size={16} className="mr-2 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-600">
+                    {filteredResults[0].request.patient.firstName} {filteredResults[0].request.patient.lastName}
+                  </span>
+                </div>
+              )}
+              
+              {/* Show request ID if filtering by request */}
+              {requestIdFromUrl && (
+                <div className="flex items-center">
+                  <FileText size={16} className="mr-2 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-600">
+                    {language === 'fr' ? 'Demande: ' : 'Request: '} {requestIdFromUrl}
+                  </span>
+                </div>
+              )}
+              
+              {/* Button to clear all filters */}
+              <button 
+                onClick={() => {
+                  // Clear all filters and navigate back to results page without query params
+                  window.location.href = '/results';
+                }}
+                className="self-start text-xs text-gray-500 hover:text-gray-700 mt-1"
+              >
+                ({language === 'fr' ? 'effacer les filtres' : 'clear filters'})
+              </button>
+            </div>
+          )}
         </div>
         <button
           onClick={loadResults}
@@ -465,7 +564,8 @@ export default function ResultEntryPage() {
               value={filters.patientId}
               onChange={(e) => handleFilterChange('patientId', e.target.value)}
               placeholder={t.patientId}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              disabled={!!patientIdFromUrl}
+              className={`w-full px-4 py-2 border ${patientIdFromUrl ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : 'border-gray-300 dark:border-gray-600'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
             />
           </div>
           <div>
@@ -483,7 +583,8 @@ export default function ResultEntryPage() {
               value={filters.requestId}
               onChange={(e) => handleFilterChange('requestId', e.target.value)}
               placeholder={t.requestId}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              disabled={!!requestIdFromUrl}
+              className={`w-full px-4 py-2 border ${requestIdFromUrl ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : 'border-gray-300 dark:border-gray-600'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
             />
           </div>
           <div>
@@ -577,7 +678,25 @@ export default function ResultEntryPage() {
               ) : filteredResults.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                    {t.notFound}
+                    {patientIdFromUrl || requestIdFromUrl ? (
+                      <div>
+                        <p>{t.notFound}</p>
+                        <p className="mt-2 text-sm">
+                          {patientIdFromUrl && (
+                            language === 'fr' 
+                              ? 'Aucun résultat trouvé pour ce patient.' 
+                              : 'No results found for this patient.'
+                          )}
+                          {requestIdFromUrl && (
+                            language === 'fr' 
+                              ? 'Aucun résultat trouvé pour cette demande.' 
+                              : 'No results found for this request.'
+                          )}
+                        </p>
+                      </div>
+                    ) : (
+                      t.notFound
+                    )}
                   </td>
                 </tr>
               ) : (

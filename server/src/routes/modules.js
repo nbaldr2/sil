@@ -5,6 +5,7 @@ const crypto = require('crypto');
 
 const router = express.Router();
 const prisma = new PrismaClient();
+const staticModules = require('../utils/staticModules');
 
 // Get all available modules
 router.get('/', async (req, res) => {
@@ -39,7 +40,19 @@ router.get('/', async (req, res) => {
       };
     });
 
-    res.json(modulesWithStatus);
+    // Merge static modules that may not be seeded in the DB (keep DB entries first)
+    const staticFallback = staticModules.filter(sm => !modulesWithStatus.some(m => m.name === sm.name || m.id === sm.id));
+    const merged = modulesWithStatus.concat(staticFallback.map(sm => ({
+      ...sm,
+      // make shape compatible with moduleService expectations
+      displayName: sm.displayName || sm.name,
+      isInstalled: false,
+      daysRemaining: 0,
+      licenseStatus: null,
+      expiresAt: null
+    })));
+
+    res.json(merged);
   } catch (error) {
     console.error('Error fetching modules:', error);
     res.status(500).json({ error: 'Failed to fetch modules' });

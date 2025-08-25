@@ -257,6 +257,7 @@ model RequestAnalysis {
   requestId  String
   analysisId String
   price      Float  @default(0)
+  tva        Float  @default(0)
 
   // Relations
   request  Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)

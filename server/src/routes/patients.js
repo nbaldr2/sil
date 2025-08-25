@@ -246,11 +246,13 @@ const prisma = new PrismaClient();
 
 // Validation middleware
 const patientValidation = [
-  body('firstName').isLength({ min: 2 }).trim(),
-  body('lastName').isLength({ min: 2 }).trim(),
-  body('dateOfBirth').isLength({ min: 1 }),
-  body('cnssNumber').optional().isLength({ min: 1 }),
-  body('gender').isIn(['M', 'F'])
+  body('firstName').notEmpty().withMessage('First name is required').isLength({ min: 2 }).trim(),
+  body('lastName').notEmpty().withMessage('Last name is required').isLength({ min: 2 }).trim(),
+  body('dateOfBirth').notEmpty().withMessage('Date of birth is required').isISO8601().withMessage('Valid date format required (YYYY-MM-DD)'),
+  body('gender').notEmpty().withMessage('Gender is required').isIn(['M', 'F']).withMessage('Gender must be M or F'),
+  body('email').optional({ nullable: true, checkFalsy: true }).isEmail().withMessage('Valid email is required'),
+  body('phone').optional({ nullable: true, checkFalsy: true }).isString().withMessage('Phone must be a string'),
+  body('cnssNumber').optional({ nullable: true, checkFalsy: true }).isString().withMessage('CNSS number must be a string')
 ];
 
 // Get all patients
@@ -395,29 +397,58 @@ router.get('/:id', async (req, res) => {
 // Create patient
 router.post('/', patientValidation, async (req, res) => {
   try {
+    console.log('Creating patient with data:', req.body);
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        details: errors.array()
+      });
     }
 
     const { firstName, lastName, dateOfBirth, cnssNumber, gender, address, phone, email } = req.body;
 
-    // Check if patient with same CNSS already exists (only if CNSS is provided)
-    if (cnssNumber) {
-      const existingPatient = await prisma.patient.findUnique({
-        where: { cnssNumber }
+    // Validate required fields
+    if (!firstName || !lastName || !dateOfBirth || !gender) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        required: ['firstName', 'lastName', 'dateOfBirth', 'gender']
       });
+    }
 
-      if (existingPatient) {
-        return res.status(400).json({ error: 'Patient with this CNSS number already exists' });
+    // Check for existing CNSS or email
+    if (cnssNumber || email) {
+      const whereConditions = [];
+      if (cnssNumber) whereConditions.push({ cnssNumber });
+      if (email) whereConditions.push({ email });
+      
+      const existing = await prisma.patient.findFirst({
+        where: {
+          OR: whereConditions
+        }
+      });
+      
+      if (existing) {
+        return res.status(409).json({ 
+          error: 'Patient already exists with this CNSS number or email' 
+        });
       }
+    }
+
+    // Convert dateOfBirth to proper DateTime format
+    const dateOfBirthFormatted = new Date(dateOfBirth);
+    if (isNaN(dateOfBirthFormatted.getTime())) {
+      return res.status(400).json({ 
+        error: 'Invalid date format for dateOfBirth. Use YYYY-MM-DD format.' 
+      });
     }
 
     const patient = await prisma.patient.create({
       data: {
         firstName,
         lastName,
-        dateOfBirth,
+        dateOfBirth: dateOfBirthFormatted,
         cnssNumber,
         gender,
         address,
@@ -426,11 +457,17 @@ router.post('/', patientValidation, async (req, res) => {
       }
     });
 
-    res.status(201).json({ patient });
+    res.status(201).json({ 
+      patient,
+      message: 'Patient created successfully' 
+    });
 
   } catch (error) {
-    console.error('Create patient error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Patient creation error:', error);
+    res.status(500).json({ 
+      error: 'Failed to create patient',
+      details: error.message 
+    });
   }
 });
 
@@ -465,18 +502,30 @@ router.put('/:id', patientValidation, async (req, res) => {
       }
     }
 
+    // Convert dateOfBirth to proper DateTime format if provided
+    const updateData = {
+      firstName,
+      lastName,
+      cnssNumber,
+      gender,
+      address,
+      phone,
+      email
+    };
+
+    if (dateOfBirth) {
+      const dateOfBirthFormatted = new Date(dateOfBirth);
+      if (isNaN(dateOfBirthFormatted.getTime())) {
+        return res.status(400).json({ 
+          error: 'Invalid date format for dateOfBirth. Use YYYY-MM-DD format.' 
+        });
+      }
+      updateData.dateOfBirth = dateOfBirthFormatted;
+    }
+
     const patient = await prisma.patient.update({
       where: { id },
-      data: {
-        firstName,
-        lastName,
-        dateOfBirth,
-        cnssNumber,
-        gender,
-        address,
-        phone,
-        email
-      }
+      data: updateData
     });
 
     res.json({ patient });
