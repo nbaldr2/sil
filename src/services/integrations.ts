@@ -17,6 +17,11 @@ export const clearAuthToken = () => {
 // API request helper with retry mechanism
 const apiRequest = async (endpoint: string, options: RequestInit = {}, retries = 2) => {
   const url = `${API_BASE_URL}${endpoint}`;
+  
+  // Always get the latest token from localStorage
+  const currentToken = localStorage.getItem('sil_lab_token');
+  const currentUser = localStorage.getItem('sil_lab_user');
+  
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Cache-Control': 'no-cache',
@@ -24,11 +29,16 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}, retries =
     ...(options.headers as Record<string, string> || {}),
   };
 
-  if (authToken) {
-    headers.Authorization = `Bearer ${authToken}`;
+  if (currentToken) {
+    headers.Authorization = `Bearer ${currentToken}`;
   }
 
-  console.log('API Request:', url, headers);
+  console.log('API Request Debug:', {
+    url,
+    hasToken: !!currentToken,
+    user: currentUser ? JSON.parse(currentUser) : null,
+    method: options.method || 'GET'
+  });
 
   try {
     const response = await fetch(url, {
@@ -65,8 +75,22 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}, retries =
       }
       
       // Include more detailed error information if available
-      const errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+      let errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+      
+      // Handle validation errors
+      if (errorData.errors && Array.isArray(errorData.errors)) {
+        errorMessage = errorData.errors.map((err: any) => err.msg || err.message).join(', ');
+      }
+      
       const errorDetails = errorData.details ? `: ${errorData.details}` : '';
+      console.error('API Error Details:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData,
+        url,
+        method: options.method || 'GET'
+      });
+      console.error('Full Error Data:', JSON.stringify(errorData, null, 2));
       throw new Error(errorMessage + errorDetails);
     }
 
@@ -109,15 +133,30 @@ export const authService = {
   },
 
   createUser: async (userData: any) => {
-    return await apiRequest('/auth/users', {
+    const response = await apiRequest('/auth/users', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
+    return response.user;
   },
 
   getUsers: async () => {
     const response = await apiRequest('/auth/users');
     return response.users;
+  },
+
+  updateUser: async (id: string, data: any) => {
+    const response = await apiRequest(`/auth/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response.user;
+  },
+
+  deleteUser: async (id: string) => {
+    await apiRequest(`/auth/users/${id}`, {
+      method: 'DELETE',
+    });
   }
 };
 
@@ -435,8 +474,9 @@ export const pricingService = {
     try {
       const response = await analysesService.getAnalyses();
       return response.analyses.map((analysis: any) => ({
+        id: analysis.id,
         code: analysis.code,
-        nom: analysis.nom,
+        nom: analysis.nom || analysis.name, // Handle both nom and name fields
         category: analysis.category,
         price: analysis.price,
         tva: analysis.tva,
@@ -450,14 +490,28 @@ export const pricingService = {
 
   savePrices: async (prices: any[]) => {
     try {
-      const updates = prices.map(price => ({
-        id: price.id,
-        price: price.price,
-        tva: price.tva
-      }));
+      // Filter out prices without ID (these would be default data that doesn't exist in DB yet)
+      const updates = prices
+        .filter(price => price.id) // Only include prices with ID
+        .map(price => ({
+          id: price.id,
+          price: price.price,
+          tva: price.tva
+        }));
+      
+      if (updates.length === 0) {
+        console.warn('No valid price updates to save (missing IDs)');
+        return false;
+      }
       
       const response = await analysesService.bulkUpdatePrices(updates);
-      return response.results.every((r: any) => r.success);
+      const success = response.results.every((r: any) => r.success);
+      
+      if (!success) {
+        console.error('Some price updates failed:', response.results.filter((r: any) => !r.success));
+      }
+      
+      return success;
     } catch (error) {
       console.error('Save prices error:', error);
       return false;

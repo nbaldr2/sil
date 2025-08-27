@@ -360,7 +360,7 @@ export default function ModuleStore() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-500 dark:text-gray-400">{t.price}:</span>
                       <span className="text-gray-900 dark:text-white">
-                        {module.price === 0 ? t.free : `$${module.price}`}
+                        {module.price === 0 ? t.free : `${module.price} /mois`}
                       </span>
                     </div>
                     {module.isInstalled && (

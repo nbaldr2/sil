@@ -55,6 +55,7 @@ export default function Dashboard() {
   const { getActiveDashboardWidgets, getActiveQuickActions } = useModuleManager();
   const navigate = useNavigate();
   const [stockModuleAccess, setStockModuleAccess] = useState<ModuleAccess | null>(null);
+  const [billingModuleAccess, setBillingModuleAccess] = useState<ModuleAccess | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     totalRequests: 0,
     pendingRequests: 0,
@@ -208,21 +209,26 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadDashboardData();
-  }, [selectedPeriod, stockModuleAccess]); // Reload when stock module access changes
+  }, [selectedPeriod, stockModuleAccess, billingModuleAccess]); // Reload when module access changes
 
-  // Check stock module access when component mounts or modules change
+  // Check module access when component mounts or modules change
   useEffect(() => {
-    const checkStockModuleAccess = async () => {
+    const checkModuleAccess = async () => {
       try {
-        const access = await moduleService.checkModuleAccess('stock-manager');
-        setStockModuleAccess(access);
+        const [stockAccess, billingAccess] = await Promise.all([
+          moduleService.checkModuleAccess('stock-manager'),
+          moduleService.checkModuleAccess('billing-manager')
+        ]);
+        setStockModuleAccess(stockAccess);
+        setBillingModuleAccess(billingAccess);
       } catch (error) {
-        console.error('Error checking stock module access:', error);
+        console.error('Error checking module access:', error);
         setStockModuleAccess({ hasAccess: false, daysRemaining: 0, status: null, expiresAt: null, features: [] });
+        setBillingModuleAccess({ hasAccess: false, daysRemaining: 0, status: null, expiresAt: null, features: [] });
       }
     };
 
-    checkStockModuleAccess();
+    checkModuleAccess();
   }, [moduleVersion]); // Refresh when moduleVersion changes
 
   const loadDashboardData = async () => {

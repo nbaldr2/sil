@@ -2,7 +2,7 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-dbml-generator"
 }
  
 
@@ -117,6 +117,9 @@ model User {
   stockOuts StockOut[]
   adjustments InventoryAdjustment[]
   transfers StockTransfer[]
+  invoices  Invoice[]
+  transactions Transaction[]
+  claims    InsuranceClaim[]
 }
 
 model Patient {
@@ -136,6 +139,7 @@ model Patient {
   // Relations
   requests Request[]
   analysisResults AnalysisResult[]
+  invoices Invoice[]
 }
 
 model Doctor {
@@ -223,6 +227,7 @@ model Analysis {
   // Relations
   requestAnalyses RequestAnalysis[]
   results         Result[]
+  invoiceItems    InvoiceItem[]
 }
 
 model Request {
@@ -250,6 +255,7 @@ model Request {
   createdBy       User            @relation(fields: [createdById], references: [id])
   requestAnalyses RequestAnalysis[]
   results         Result[]
+  invoices        Invoice[]
 }
 
 model RequestAnalysis {
@@ -297,11 +303,83 @@ model AnalysisResult {
 }
 
 model SystemConfig {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  // Laboratory Information
+  labName               String   @default("SIL Laboratory")
+  labCode               String?  @unique
+  address               String   @default("123 Main Street, City, Country")
+  phone                 String   @default("+1234567890")
+  email                 String   @default("info@sil.lab")
+  website               String?
+  fax                   String?
+  
+  // Director/Manager Information
+  directorName          String?
+  directorTitle         String?
+  directorSignature     String? // Base64 encoded signature image
+  
+  // Laboratory Accreditation
+  accreditationNumber   String?
+  accreditationBody     String?
+  accreditationExpiry   DateTime?
+  licenseNumber         String?
+  
+  // Currency & Financial Settings
+  currencySymbol        String   @default("€")
+  currencyCode          String   @default("EUR")
+  currencyPosition      String   @default("AFTER") // BEFORE or AFTER
+  decimalPlaces         Int      @default(2)
+  taxRate               Float    @default(20.0)
+  
+  // Print Settings
+  autoprint             Boolean  @default(true)
+  defaultPrinter        String?
+  printLogo             Boolean  @default(true)
+  logoUrl               String?
+  reportHeader          String?
+  reportFooter          String?
+  
+  // Notification Settings
+  smsNotifications      Boolean  @default(true)
+  emailNotifications    Boolean  @default(true)
+  smsProvider           String?
+  smsApiKey             String?
+  emailProvider         String?
+  emailApiKey           String?
+  
+  // System Settings
+  language              String   @default("en")
+  timezone              String   @default("UTC")
+  dateFormat            String   @default("DD/MM/YYYY")
+  timeFormat            String   @default("24h")
+  
+  // Quality Control Settings
+  qcEnabled             Boolean  @default(true)
+  qcFrequency           String   @default("DAILY") // DAILY, WEEKLY, MONTHLY
+  qcRetentionDays       Int      @default(365)
+  
+  // Backup Settings
+  autoBackup            Boolean  @default(false)
+  backupFrequency       String   @default("WEEKLY")
+  backupRetentionDays   Int      @default(30)
+  
+  // Security Settings
+  sessionTimeout        Int      @default(30) // minutes
+  passwordExpiry        Int      @default(90) // days
+  maxLoginAttempts      Int      @default(5)
+  
+  // Integration Settings
+  hl7Enabled            Boolean  @default(false)
+  hl7Port               Int      @default(2575)
+  lisIntegration        Boolean  @default(false)
+  
+  // Custom Fields (JSON)
+  customSettings        String?  // JSON string for additional custom settings
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@map("system_config")
 }
 
 model Product {
@@ -549,4 +627,348 @@ model ModuleLicense {
 
   // Relations
   module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// BILLING MANAGER MODULE SCHEMA
+// ============================================================================
+
+enum InvoiceType {
+  STANDARD
+  PROFORMA
+  CREDIT_NOTE
+  DEBIT_NOTE
+  RECEIPT
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  PARTIAL_PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHECK
+  CREDIT_CARD
+  DEBIT_CARD
+  INSURANCE_DIRECT
+}
+
+enum TransactionType {
+  PAYMENT
+  REFUND
+  ADJUSTMENT
+  DISCOUNT
+  TAX_ADJUSTMENT
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum TaxType {
+  TVA
+  STAMP_TAX
+  WITHHOLDING_TAX
+  OTHER
+}
+
+enum RecurrenceType {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum ClaimStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  PAID
+}
+
+// Customer/Payer Management
+model Customer {
+  id                String   @id @default(cuid())
+  type              String   // INDIVIDUAL, INSURANCE, COMPANY
+  name              String
+  email             String?
+  phone             String?
+  address           String?
+  city              String?
+  postalCode        String?
+  country           String   @default("Morocco")
+  
+  // Tax Information
+  taxId             String?  // ICE number for Morocco
+  vatNumber         String?
+  
+  // Insurance specific fields
+  insuranceCode     String?
+  contractNumber    String?
+  coveragePercentage Float?  @default(0)
+  
+  // Credit terms
+  creditLimit       Float    @default(0)
+  paymentTerms      Int      @default(30) // days
+  
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  invoices          Invoice[]
+  transactions      Transaction[]
+  claims            InsuranceClaim[]
+}
+
+// Invoice Management
+model Invoice {
+  id                String        @id @default(cuid())
+  invoiceNumber     String        @unique
+  type              InvoiceType   @default(STANDARD)
+  status            InvoiceStatus @default(DRAFT)
+  
+  // Customer Information
+  customerId        String
+  customerName      String        // Cached for performance
+  customerAddress   String?
+  customerTaxId     String?
+  
+  // Request/Patient Information
+  requestId         String?
+  patientId         String?
+  patientName       String?
+  
+  // Financial Information
+  subtotal          Float         @default(0)
+  discountAmount    Float         @default(0)
+  discountPercent   Float         @default(0)
+  taxAmount         Float         @default(0)
+  stampTaxAmount    Float         @default(0)
+  totalAmount       Float         @default(0)
+  paidAmount        Float         @default(0)
+  balanceAmount     Float         @default(0)
+  
+  // Currency
+  currency          String        @default("MAD")
+  exchangeRate      Float         @default(1)
+  
+  // Dates
+  issueDate         DateTime      @default(now())
+  dueDate           DateTime
+  paidDate          DateTime?
+  
+  // Recurrence
+  recurrenceType    RecurrenceType @default(NONE)
+  recurrenceEnd     DateTime?
+  parentInvoiceId   String?
+  
+  // Additional Information
+  notes             String?
+  internalNotes     String?
+  terms             String?
+  
+  // System fields
+  createdById       String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  customer          Customer      @relation(fields: [customerId], references: [id])
+  request           Request?      @relation(fields: [requestId], references: [id])
+  patient           Patient?      @relation(fields: [patientId], references: [id])
+  createdBy         User          @relation(fields: [createdById], references: [id])
+  items             InvoiceItem[]
+  taxes             InvoiceTax[]
+  transactions      Transaction[]
+  parentInvoice     Invoice?      @relation("InvoiceRecurrence", fields: [parentInvoiceId], references: [id])
+  childInvoices     Invoice[]     @relation("InvoiceRecurrence")
+  claims            InsuranceClaim[]
+  reminders         PaymentReminder[]
+}
+
+// Invoice Line Items
+model InvoiceItem {
+  id                String   @id @default(cuid())
+  invoiceId         String
+  
+  // Item Information
+  analysisId        String?
+  description       String
+  quantity          Float    @default(1)
+  unitPrice         Float
+  discount          Float    @default(0)
+  taxRate           Float    @default(20) // TVA rate
+  lineTotal         Float
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  invoice           Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  analysis          Analysis? @relation(fields: [analysisId], references: [id])
+}
+
+// Tax Management
+model InvoiceTax {
+  id                String   @id @default(cuid())
+  invoiceId         String
+  taxType           TaxType
+  taxName           String
+  taxRate           Float
+  taxableAmount     Float
+  taxAmount         Float
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  invoice           Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+// Payment Transactions
+model Transaction {
+  id                String            @id @default(cuid())
+  transactionNumber String            @unique
+  type              TransactionType
+  status            TransactionStatus @default(PENDING)
+  
+  // Financial Information
+  amount            Float
+  currency          String            @default("MAD")
+  exchangeRate      Float             @default(1)
+  
+  // Payment Information
+  paymentMethod     PaymentMethod
+  paymentReference  String?           // Check number, transfer reference, etc.
+  paymentDate       DateTime          @default(now())
+  
+  // Related Records
+  invoiceId         String?
+  customerId        String
+  
+  // Additional Information
+  description       String?
+  notes             String?
+  
+  // System fields
+  processedById     String
+  processedAt       DateTime          @default(now())
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // Relations
+  invoice           Invoice?          @relation(fields: [invoiceId], references: [id])
+  customer          Customer          @relation(fields: [customerId], references: [id])
+  processedBy       User              @relation(fields: [processedById], references: [id])
+}
+
+// Insurance Claims
+model InsuranceClaim {
+  id                String      @id @default(cuid())
+  claimNumber       String      @unique
+  status            ClaimStatus @default(DRAFT)
+  
+  // Insurance Information
+  customerId        String
+  insuranceCode     String
+  contractNumber    String?
+  
+  // Claim Information
+  invoiceId         String
+  claimAmount       Float
+  approvedAmount    Float?
+  rejectionReason   String?
+  
+  // Dates
+  submittedDate     DateTime?
+  approvedDate      DateTime?
+  paidDate          DateTime?
+  
+  // Documents
+  documents         Json?             // Array of document URLs
+  
+  // System fields
+  createdById       String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // Relations
+  customer          Customer          @relation(fields: [customerId], references: [id])
+  invoice           Invoice           @relation(fields: [invoiceId], references: [id])
+  createdBy         User              @relation(fields: [createdById], references: [id])
+}
+
+// Payment Reminders
+model PaymentReminder {
+  id                String   @id @default(cuid())
+  invoiceId         String
+  reminderLevel     Int      // 1, 2, 3 for escalation
+  sentDate          DateTime @default(now())
+  dueDate           DateTime
+  amount            Float
+  method            String   // EMAIL, SMS, LETTER
+  status            String   // SENT, DELIVERED, FAILED
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  invoice           Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+// Financial Reports Cache
+model FinancialReport {
+  id                String   @id @default(cuid())
+  reportType        String   // DAILY, WEEKLY, MONTHLY, YEARLY
+  reportDate        DateTime
+  periodStart       DateTime
+  periodEnd         DateTime
+  
+  // Metrics
+  totalRevenue      Float    @default(0)
+  totalPaid         Float    @default(0)
+  totalOutstanding  Float    @default(0)
+  totalOverdue      Float    @default(0)
+  
+  // Additional data
+  reportData        Json     // Detailed report data
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([reportType, reportDate])
+}
+
+// Tax Configuration
+model TaxConfiguration {
+  id                String   @id @default(cuid())
+  taxType           TaxType
+  taxName           String
+  taxRate           Float
+  isActive          Boolean  @default(true)
+  effectiveFrom     DateTime @default(now())
+  effectiveTo       DateTime?
+  
+  // Moroccan specific
+  isDefault         Boolean  @default(false)
+  applicableToServices Boolean @default(true)
+  applicableToProducts Boolean @default(true)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }

@@ -76,12 +76,28 @@ export const generateResultPDF = async (
   try {
     if (!request?.patient) throw new Error('Invalid request data');
 
+    // Fetch system configuration
+    let systemConfig = null;
+    try {
+      const configResponse = await fetch('http://localhost:5001/api/config', {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      if (configResponse.ok) {
+        const configData = await configResponse.json();
+        systemConfig = configData.config;
+      }
+    } catch (error) {
+      console.warn('Could not fetch system config, using defaults');
+    }
+
     const t = {
       en: {
-        labName: 'SIL Laboratory',
-        labAddress: '123 Health Street, Casablanca, Morocco',
-        labPhone: 'Phone: +212 5 22 123 456',
-        labEmail: 'Email: contact@sil-lab.ma',
+        labName: systemConfig?.labName || 'SIL Laboratory',
+        labAddress: systemConfig?.address || '123 Health Street, Casablanca, Morocco',
+        labPhone: `Phone: ${systemConfig?.phone || '+212 5 22 123 456'}`,
+        labEmail: `Email: ${systemConfig?.email || 'contact@sil-lab.ma'}`,
         reportTitle: 'COMPLETE BLOOD COUNT (CBC)',
         patientInfo: 'PATIENT INFORMATION',
         doctorInfo: 'PRESCRIBING DOCTOR',
@@ -105,10 +121,10 @@ export const generateResultPDF = async (
         noResults: 'No results available',
       },
       fr: {
-        labName: 'Laboratoire SIL',
-        labAddress: '123 Rue de la Santé, Casablanca, Maroc',
-        labPhone: 'Tél: +212 5 22 123 456',
-        labEmail: 'Email: contact@sil-lab.ma',
+        labName: systemConfig?.labName || 'Laboratoire SIL',
+        labAddress: systemConfig?.address || '123 Rue de la Santé, Casablanca, Maroc',
+        labPhone: `Tél: ${systemConfig?.phone || '+212 5 22 123 456'}`,
+        labEmail: `Email: ${systemConfig?.email || 'contact@sil-lab.ma'}`,
         reportTitle: 'NUMÉRATION FORMULE SANGUINE (NFS)',
         patientInfo: 'INFORMATIONS PATIENT',
         doctorInfo: 'MÉDECIN PRESCRIPTEUR',

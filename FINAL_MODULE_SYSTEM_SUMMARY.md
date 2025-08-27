@@ -19,6 +19,7 @@ const installedModules = await prisma.moduleLicense.findMany({
 });
 ```
 
+
 ### 2. **Frontend Filtering Logic** ✅
 ```typescript
 // /src/components/ModuleManager.tsx

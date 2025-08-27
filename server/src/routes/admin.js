@@ -7,6 +7,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const archiver = require('archiver');
 const unzipper = require('unzipper');
+const auditService = require('../services/auditService');
 
 // Configure multer for backup uploads
 const storage = multer.diskStorage({
@@ -461,17 +462,166 @@ router.delete('/cron-jobs/:jobName', async (req, res) => {
   }
 });
 
-// Audit Trail endpoints
+// Enhanced Audit Trail endpoints
 router.get('/audit-logs', async (req, res) => {
-    try {
-        const logs = await prisma.auditLog.findMany({
-            orderBy: { timestamp: 'desc' },
-            take: 100
-        });
-        res.json(logs);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+  try {
+    const {
+      userId,
+      action,
+      resourceType,
+      startDate,
+      endDate,
+      severity,
+      category,
+      page = 1,
+      limit = 50,
+      search
+    } = req.query;
+
+    const filters = {
+      userId,
+      action,
+      resourceType,
+      startDate,
+      endDate,
+      severity,
+      category,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      search
+    };
+
+    const result = await auditService.queryAuditLogs(filters);
+    
+    // Log the audit query itself
+    await auditService.logActivity(auditService.ACTIVITY_CATEGORIES.DATA.EXPORT, {
+      userId: req.user?.id,
+      userEmail: req.user?.email,
+      userName: req.user?.name,
+      action: 'AUDIT_LOGS_QUERY',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { filters }
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching audit logs:', error);
+    
+    // Log the error
+    await auditService.logActivity(auditService.ACTIVITY_CATEGORIES.SECURITY.UNAUTHORIZED_ACCESS, {
+      userId: req.user?.id,
+      userEmail: req.user?.email,
+      action: 'AUDIT_LOGS_QUERY_FAILED',
+      ipAddress: req.ip,
+      success: false,
+      errorMessage: error.message
+    });
+    
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get audit statistics
+router.get('/audit-stats', async (req, res) => {
+  try {
+    const { timeframe = '30d' } = req.query;
+    const stats = await auditService.getAuditStats(timeframe);
+    
+    // Log stats access
+    await auditService.logActivity(auditService.ACTIVITY_CATEGORIES.DATA.REPORT_GENERATE, {
+      userId: req.user?.id,
+      userEmail: req.user?.email,
+      userName: req.user?.name,
+      action: 'AUDIT_STATS_VIEW',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { timeframe }
+    });
+    
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching audit stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Export audit logs
+router.get('/audit-logs/export', async (req, res) => {
+  try {
+    const {
+      format = 'json',
+      startDate,
+      endDate,
+      userId,
+      action,
+      severity
+    } = req.query;
+
+    const filters = {
+      startDate,
+      endDate,
+      userId,
+      action,
+      severity,
+      limit: 10000 // Large limit for export
+    };
+
+    const result = await auditService.queryAuditLogs(filters);
+    
+    // Log the export action
+    await auditService.logActivity(auditService.ACTIVITY_CATEGORIES.DATA.EXPORT, {
+      userId: req.user?.id,
+      userEmail: req.user?.email,
+      userName: req.user?.name,
+      action: 'AUDIT_LOGS_EXPORT',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { format, filters, recordCount: result.logs.length }
+    });
+
+    if (format === 'csv') {
+      // Convert to CSV
+      const csvHeader = 'Timestamp,User,Action,Resource,IP Address,Success,Details\n';
+      const csvData = result.logs.map(log => 
+        `"${log.timestamp}","${log.user_email || 'N/A'}","${log.action}","${log.resource_type || 'N/A'}","${log.ip_address}","${log.success}","${(log.metadata || '').replace(/"/g, '""')}"`
+      ).join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="audit-logs-${new Date().toISOString().split('T')[0]}.csv"`);
+      res.send(csvHeader + csvData);
+    } else {
+      // Return JSON
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="audit-logs-${new Date().toISOString().split('T')[0]}.json"`);
+      res.json(result.logs);
     }
+  } catch (error) {
+    console.error('Error exporting audit logs:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Initialize audit system
+router.post('/audit/initialize', async (req, res) => {
+  try {
+    await auditService.ensureAuditLogTable();
+    
+    // Log the initialization
+    await auditService.logActivity(auditService.ACTIVITY_CATEGORIES.ADMIN.SYSTEM_CONFIG, {
+      userId: req.user?.id,
+      userEmail: req.user?.email,
+      userName: req.user?.name,
+      action: 'AUDIT_SYSTEM_INITIALIZE',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.json({ message: 'Audit system initialized successfully' });
+  } catch (error) {
+    console.error('Error initializing audit system:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Plugin Store endpoints

@@ -24,6 +24,7 @@ const requestRoutes = require('./routes/requests');
 const resultRoutes = require('./routes/results');
 const configRoutes = require('./routes/config');
 const stockRoutes = require('./routes/stock');
+const billingRoutes = require('./routes/billing');
 const pluginRoutes = require('./routes/plugins');
 const automateRoutes = require('./routes/automates');
 const moduleRoutes = require('./routes/modules');
@@ -34,6 +35,17 @@ const adminRoutes = require('./routes/admin');
 const { authenticateToken, requireAdmin } = require('./middleware/auth');
 const { logger, requestLogger, errorLogger } = require('./utils/logger');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const auditService = require('./services/auditService');
+
+// Initialize audit system on startup
+(async () => {
+  try {
+    await auditService.ensureAuditLogTable();
+    console.log('Audit system initialized successfully');
+  } catch (error) {
+    console.warn('Failed to initialize audit system:', error.message);
+  }
+})();
 
 const app = express();
 const prisma = new PrismaClient();
@@ -62,6 +74,9 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Add request logging
 app.use(requestLogger);
+
+// Add audit trail middleware for authenticated routes
+app.use('/api', auditService.auditMiddleware());
 
 // Add payload size validation middleware
 const validatePayloadSize = (req, res, next) => {
@@ -142,8 +157,9 @@ app.use('/api/doctors', authenticateToken, doctorRoutes);
 app.use('/api/analyses', authenticateToken, analysisRoutes);
 app.use('/api/requests', authenticateToken, requestRoutes);
 app.use('/api/results', authenticateToken, resultRoutes);
-app.use('/api/config', authenticateToken, configRoutes);
+app.use('/api/config', configRoutes);
 app.use('/api/stock', authenticateToken, stockRoutes);
+app.use('/api/billing', authenticateToken, billingRoutes);
 app.use('/api/plugins', authenticateToken, requireAdmin, pluginRoutes);
 app.use('/api/automates', authenticateToken, automateRoutes);
 app.use('/api/modules', authenticateToken, moduleRoutes);

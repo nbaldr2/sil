@@ -11,8 +11,14 @@ import NewAnalysisRequest from './components/NewAnalysisRequest';
 import NewRequestWizard from './components/NewRequestWizard';
 import ResultEntryPage from './components/ResultEntryPage';
 import BiologistValidation from './components/BiologistValidation';
-import BillingModule from './components/BillingModule';
+import EnhancedBillingModule from './components/billing/EnhancedBillingModule';
+import { BillingModuleWrapper } from './components/billing/BillingModule';
+import BillingTest from './components/billing/BillingTest';
+import SimpleBillingTest from './components/billing/SimpleBillingTest';
+import MinimalBillingModule from './components/billing/MinimalBillingModule';
+import WorkingBillingModule, { WorkingBillingModuleWrapper } from './components/billing/WorkingBillingModule';
 import ConfigCenter from './components/ConfigCenter';
+import ServerInfo from './components/ServerInfo';
 import PriceManagement from './components/PriceManagement';
 import UserManagement from './components/UserManagement';
 import StockDashboard from './components/StockDashboard';
@@ -232,8 +238,8 @@ function App() {
                     <Route path="/analyses" element={<NewAnalysisRequest />} />
                     <Route path="/results" element={<ResultEntryPage />} />
                     <Route path="/validation" element={<BiologistValidation />} />
-                    <Route path="/billing" element={<BillingModule />} />
-                    <Route path="/config" element={<ConfigCenter />} />
+                    <Route path="/config/system" element={<ConfigCenter />} />
+                    <Route path="/config/server-info" element={<ServerInfo />} />
                     <Route path="/config/prices" element={<PriceManagement />} />
                     <Route path="/config/users" element={<UserManagement />} />
                     <Route path="/config/modules" element={<ModuleStore />} />
@@ -247,8 +253,12 @@ function App() {
                     {/* Backwards compat: redirect old Pro path to module route */}
                     <Route path="/analytics-pro" element={<Navigate to="/modules/analytics-pro" replace />} />
 
-                    {/* Module dynamic routes placeholder to avoid catch-all redirect */}
-                    <Route path="/modules/*" element={<div />} />
+                    {/* Billing Manager direct route for testing */}
+                    <Route path="/modules/billing-manager" element={<EnhancedBillingModule />} />
+                    <Route path="/modules/billing-manager-original" element={<BillingModuleWrapper />} />
+                    <Route path="/modules/billing-manager-minimal" element={<MinimalBillingModule />} />
+                    <Route path="/modules/billing-manager-simple" element={<SimpleBillingTest />} />
+                    <Route path="/modules/billing-manager-test" element={<BillingTest />} />
 
                     {/* Automate Integration Routes */}
                     <Route path="/automates" element={<AutomateIntegrationPanel />} />

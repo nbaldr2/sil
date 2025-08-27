@@ -1,0 +1,891 @@
+//// ------------------------------------------------------
+//// THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+//// ------------------------------------------------------
+
+Table HL7Message {
+  id String [pk]
+  raw String [not null]
+  messageType String [not null]
+  sourceIp String [not null]
+  status HL7MessageStatus [not null]
+  error String
+  timestamp DateTime [default: `now()`, not null]
+  processedAt DateTime
+}
+
+Table User {
+  id String [pk]
+  email String [unique, not null]
+  password String [not null]
+  name String [not null]
+  role UserRole [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  requests Request [not null]
+  auditLogs AuditLog [not null]
+  orders Order [not null]
+  stockOuts StockOut [not null]
+  adjustments InventoryAdjustment [not null]
+  transfers StockTransfer [not null]
+  invoices Invoice [not null]
+  transactions Transaction [not null]
+  claims InsuranceClaim [not null]
+}
+
+Table Patient {
+  id String [pk]
+  externalId String [unique]
+  firstName String [not null]
+  lastName String [not null]
+  dateOfBirth DateTime [not null]
+  gender String [not null]
+  phone String
+  email String
+  address String
+  cnssNumber String [unique]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  requests Request [not null]
+  analysisResults AnalysisResult [not null]
+  invoices Invoice [not null]
+}
+
+Table Doctor {
+  id String [pk]
+  firstName String [not null]
+  lastName String [not null]
+  email String [unique, not null]
+  phone String
+  specialty String
+  orderNumber String [unique]
+  status DoctorStatus [not null, default: 'ACTIVE']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  requests Request [not null]
+}
+
+Table Backup {
+  id String [pk]
+  date DateTime [default: `now()`, not null]
+  filename String [not null]
+  status String [not null]
+  size Int [not null]
+  createdBy String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  type String [not null, default: 'MANUAL']
+  description String
+}
+
+Table backup_settings {
+  id String [pk]
+  autoBackupEnabled Boolean [not null, default: false]
+  backupFrequency String [not null, default: 'WEEKLY']
+  retentionDays Int [not null, default: 30]
+  includeFiles Boolean [not null, default: true]
+  compressionEnabled Boolean [not null, default: true]
+  encryptionEnabled Boolean [not null, default: false]
+  lastBackupDate DateTime
+  nextScheduledBackup DateTime
+  cronJobId String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+}
+
+Table AuditLog {
+  id String [pk]
+  timestamp DateTime [default: `now()`, not null]
+  userId String [not null]
+  action String [not null]
+  details String [not null]
+  ipAddress String
+  user User [not null]
+}
+
+Table Plugin {
+  id String [pk]
+  name String [not null]
+  version String [not null]
+  description String [not null]
+  installed Boolean [not null, default: false]
+  enabled Boolean [not null, default: false]
+  installedAt DateTime
+  updatedAt DateTime
+}
+
+Table Analysis {
+  id String [pk]
+  code String [unique, not null]
+  name String [not null]
+  category String [not null]
+  price Float [not null, default: 0]
+  tva Float [not null, default: 20]
+  cost Float [not null, default: 0]
+  description String
+  isActive Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  requestAnalyses RequestAnalysis [not null]
+  results Result [not null]
+  invoiceItems InvoiceItem [not null]
+}
+
+Table Request {
+  id String [pk]
+  patientId String [not null]
+  doctorId String
+  status RequestStatus [not null, default: 'PENDING']
+  priority String [not null, default: 'NORMAL']
+  sampleType SampleType [not null, default: 'BLOOD']
+  tubeType TubeType
+  collectionDate DateTime
+  collectionTime String
+  notes String
+  totalAmount Float [not null, default: 0]
+  discount Float [not null, default: 0]
+  advancePayment Float [not null, default: 0]
+  amountDue Float [not null, default: 0]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  createdById String [not null]
+  patient Patient [not null]
+  doctor Doctor
+  createdBy User [not null]
+  requestAnalyses RequestAnalysis [not null]
+  results Result [not null]
+  invoices Invoice [not null]
+}
+
+Table RequestAnalysis {
+  id String [pk]
+  requestId String [not null]
+  analysisId String [not null]
+  price Float [not null, default: 0]
+  tva Float [not null, default: 0]
+  request Request [not null]
+  analysis Analysis [not null]
+
+  indexes {
+    (requestId, analysisId) [unique]
+  }
+}
+
+Table Result {
+  id String [pk]
+  requestId String [not null]
+  analysisId String [not null]
+  value String
+  unit String
+  reference String
+  status ResultStatus [not null, default: 'PENDING']
+  notes String
+  validatedBy String
+  validatedAt DateTime
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  request Request [not null]
+  analysis Analysis [not null]
+}
+
+Table AnalysisResult {
+  id String [pk]
+  patientId String [not null]
+  result String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  patient Patient [not null]
+}
+
+Table system_config {
+  id String [pk]
+  labName String [not null, default: 'SIL Laboratory']
+  labCode String [unique]
+  address String [not null, default: '123 Main Street, City, Country']
+  phone String [not null, default: '+1234567890']
+  email String [not null, default: 'info@sil.lab']
+  website String
+  fax String
+  directorName String
+  directorTitle String
+  directorSignature String
+  accreditationNumber String
+  accreditationBody String
+  accreditationExpiry DateTime
+  licenseNumber String
+  currencySymbol String [not null, default: '€']
+  currencyCode String [not null, default: 'EUR']
+  currencyPosition String [not null, default: 'AFTER']
+  decimalPlaces Int [not null, default: 2]
+  taxRate Float [not null, default: 20]
+  autoprint Boolean [not null, default: true]
+  defaultPrinter String
+  printLogo Boolean [not null, default: true]
+  logoUrl String
+  reportHeader String
+  reportFooter String
+  smsNotifications Boolean [not null, default: true]
+  emailNotifications Boolean [not null, default: true]
+  smsProvider String
+  smsApiKey String
+  emailProvider String
+  emailApiKey String
+  language String [not null, default: 'en']
+  timezone String [not null, default: 'UTC']
+  dateFormat String [not null, default: 'DD/MM/YYYY']
+  timeFormat String [not null, default: '24h']
+  qcEnabled Boolean [not null, default: true]
+  qcFrequency String [not null, default: 'DAILY']
+  qcRetentionDays Int [not null, default: 365]
+  autoBackup Boolean [not null, default: false]
+  backupFrequency String [not null, default: 'WEEKLY']
+  backupRetentionDays Int [not null, default: 30]
+  sessionTimeout Int [not null, default: 30]
+  passwordExpiry Int [not null, default: 90]
+  maxLoginAttempts Int [not null, default: 5]
+  hl7Enabled Boolean [not null, default: false]
+  hl7Port Int [not null, default: 2575]
+  lisIntegration Boolean [not null, default: false]
+  customSettings String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+}
+
+Table Product {
+  id String [pk]
+  name String [not null]
+  code String [unique, not null]
+  category String [not null]
+  description String
+  unit String [not null, default: 'pcs']
+  minStock Int [not null, default: 0]
+  maxStock Int
+  hasExpiryDate Boolean [not null, default: true]
+  isActive Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  stockEntries StockEntry [not null]
+  stockOuts StockOut [not null]
+  transfers StockTransfer [not null]
+  adjustments InventoryAdjustment [not null]
+  orderItems OrderItem [not null]
+}
+
+Table Supplier {
+  id String [pk]
+  name String [not null]
+  code String [unique, not null]
+  email String
+  phone String
+  address String
+  contactPerson String
+  isActive Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  stockEntries StockEntry [not null]
+  orders Order [not null]
+}
+
+Table StockEntry {
+  id String [pk]
+  productId String [not null]
+  supplierId String
+  quantity Int [not null]
+  lotNumber String
+  expiryDate DateTime
+  unitCost Float [not null, default: 0]
+  location String [not null, default: 'Main Storage']
+  notes String
+  receivedBy String
+  receivedAt DateTime [default: `now()`, not null]
+  product Product [not null]
+  supplier Supplier
+}
+
+Table StockOut {
+  id String [pk]
+  productId String [not null]
+  quantity Int [not null]
+  usedBy String
+  department String
+  purpose String
+  notes String
+  usedAt DateTime [default: `now()`, not null]
+  userId String
+  product Product [not null]
+  user User
+}
+
+Table StockTransfer {
+  id String [pk]
+  productId String [not null]
+  fromLocation String [not null]
+  toLocation String [not null]
+  quantity Int [not null]
+  transferredBy String
+  notes String
+  transferredAt DateTime [default: `now()`, not null]
+  userId String
+  product Product [not null]
+  user User
+}
+
+Table InventoryAdjustment {
+  id String [pk]
+  productId String [not null]
+  oldQuantity Int [not null]
+  newQuantity Int [not null]
+  difference Int [not null]
+  reason String [not null]
+  notes String
+  adjustedBy String
+  adjustedAt DateTime [default: `now()`, not null]
+  userId String
+  product Product [not null]
+  user User
+}
+
+Table Order {
+  id String [pk]
+  orderNumber String [unique, not null]
+  supplierId String [not null]
+  status OrderStatus [not null, default: 'DRAFT']
+  orderDate DateTime [default: `now()`, not null]
+  expectedDate DateTime
+  totalAmount Float [not null, default: 0]
+  notes String
+  createdBy String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  supplier Supplier [not null]
+  user User
+  orderItems OrderItem [not null]
+}
+
+Table OrderItem {
+  id String [pk]
+  orderId String [not null]
+  productId String [not null]
+  quantity Int [not null]
+  unitPrice Float [not null, default: 0]
+  totalPrice Float [not null, default: 0]
+  order Order [not null]
+  product Product [not null]
+}
+
+Table Automate {
+  id String [pk]
+  name String [not null]
+  type String [not null]
+  manufacturer String [not null]
+  protocol String [not null]
+  connection String [not null]
+  config Json [not null]
+  enabled Boolean [not null, default: true]
+  status String [not null, default: 'offline']
+  lastSync DateTime
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  driverCodes AutomateCodeMapping [not null]
+  transferLogs AutomateTransferLog [not null]
+  qcResults QualityControlResult [not null]
+}
+
+Table AutomateCodeMapping {
+  id String [pk]
+  automateId String [not null]
+  codeAutomate String [not null]
+  silTestName String [not null]
+  sampleType String [not null]
+  unit String
+  refRangeLow Float
+  refRangeHigh Float
+  createdAt DateTime [default: `now()`, not null]
+  automate Automate [not null]
+}
+
+Table AutomateTransferLog {
+  id String [pk]
+  automateId String [not null]
+  type String [not null]
+  status String [not null]
+  duration Int
+  errorMsg String
+  timestamp DateTime [default: `now()`, not null]
+  automate Automate [not null]
+}
+
+Table QualityControlResult {
+  id String [pk]
+  automateId String [not null]
+  testName String [not null]
+  level String [not null]
+  value Float [not null]
+  expected Float [not null]
+  deviation Float [not null]
+  status String [not null]
+  timestamp DateTime [default: `now()`, not null]
+  automate Automate [not null]
+}
+
+Table Module {
+  id String [pk]
+  name String [unique, not null]
+  displayName String [not null]
+  description String [not null]
+  version String [not null]
+  author String [not null, default: 'SIL Lab Systems']
+  category String [not null]
+  price Float [not null, default: 0]
+  features Json [not null]
+  requirements Json [not null]
+  isActive Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  licenses ModuleLicense [not null]
+}
+
+Table ModuleLicense {
+  id String [pk]
+  moduleId String [not null]
+  licenseKey String [unique, not null]
+  organizationName String
+  contactEmail String
+  status ModuleStatus [not null, default: 'TRIAL']
+  activatedAt DateTime
+  expiresAt DateTime [not null]
+  maxUsers Int [not null, default: 1]
+  features Json
+  metadata Json
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  module Module [not null]
+}
+
+Table Customer {
+  id String [pk]
+  type String [not null]
+  name String [not null]
+  email String
+  phone String
+  address String
+  city String
+  postalCode String
+  country String [not null, default: 'Morocco']
+  taxId String
+  vatNumber String
+  insuranceCode String
+  contractNumber String
+  coveragePercentage Float [default: 0]
+  creditLimit Float [not null, default: 0]
+  paymentTerms Int [not null, default: 30]
+  isActive Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  invoices Invoice [not null]
+  transactions Transaction [not null]
+  claims InsuranceClaim [not null]
+}
+
+Table Invoice {
+  id String [pk]
+  invoiceNumber String [unique, not null]
+  type InvoiceType [not null, default: 'STANDARD']
+  status InvoiceStatus [not null, default: 'DRAFT']
+  customerId String [not null]
+  customerName String [not null]
+  customerAddress String
+  customerTaxId String
+  requestId String
+  patientId String
+  patientName String
+  subtotal Float [not null, default: 0]
+  discountAmount Float [not null, default: 0]
+  discountPercent Float [not null, default: 0]
+  taxAmount Float [not null, default: 0]
+  stampTaxAmount Float [not null, default: 0]
+  totalAmount Float [not null, default: 0]
+  paidAmount Float [not null, default: 0]
+  balanceAmount Float [not null, default: 0]
+  currency String [not null, default: 'MAD']
+  exchangeRate Float [not null, default: 1]
+  issueDate DateTime [default: `now()`, not null]
+  dueDate DateTime [not null]
+  paidDate DateTime
+  recurrenceType RecurrenceType [not null, default: 'NONE']
+  recurrenceEnd DateTime
+  parentInvoiceId String
+  notes String
+  internalNotes String
+  terms String
+  createdById String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  customer Customer [not null]
+  request Request
+  patient Patient
+  createdBy User [not null]
+  items InvoiceItem [not null]
+  taxes InvoiceTax [not null]
+  transactions Transaction [not null]
+  parentInvoice Invoice
+  childInvoices Invoice [not null]
+  claims InsuranceClaim [not null]
+  reminders PaymentReminder [not null]
+}
+
+Table InvoiceItem {
+  id String [pk]
+  invoiceId String [not null]
+  analysisId String
+  description String [not null]
+  quantity Float [not null, default: 1]
+  unitPrice Float [not null]
+  discount Float [not null, default: 0]
+  taxRate Float [not null, default: 20]
+  lineTotal Float [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  invoice Invoice [not null]
+  analysis Analysis
+}
+
+Table InvoiceTax {
+  id String [pk]
+  invoiceId String [not null]
+  taxType TaxType [not null]
+  taxName String [not null]
+  taxRate Float [not null]
+  taxableAmount Float [not null]
+  taxAmount Float [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  invoice Invoice [not null]
+}
+
+Table Transaction {
+  id String [pk]
+  transactionNumber String [unique, not null]
+  type TransactionType [not null]
+  status TransactionStatus [not null, default: 'PENDING']
+  amount Float [not null]
+  currency String [not null, default: 'MAD']
+  exchangeRate Float [not null, default: 1]
+  paymentMethod PaymentMethod [not null]
+  paymentReference String
+  paymentDate DateTime [default: `now()`, not null]
+  invoiceId String
+  customerId String [not null]
+  description String
+  notes String
+  processedById String [not null]
+  processedAt DateTime [default: `now()`, not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  invoice Invoice
+  customer Customer [not null]
+  processedBy User [not null]
+}
+
+Table InsuranceClaim {
+  id String [pk]
+  claimNumber String [unique, not null]
+  status ClaimStatus [not null, default: 'DRAFT']
+  customerId String [not null]
+  insuranceCode String [not null]
+  contractNumber String
+  invoiceId String [not null]
+  claimAmount Float [not null]
+  approvedAmount Float
+  rejectionReason String
+  submittedDate DateTime
+  approvedDate DateTime
+  paidDate DateTime
+  documents Json
+  createdById String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  customer Customer [not null]
+  invoice Invoice [not null]
+  createdBy User [not null]
+}
+
+Table PaymentReminder {
+  id String [pk]
+  invoiceId String [not null]
+  reminderLevel Int [not null]
+  sentDate DateTime [default: `now()`, not null]
+  dueDate DateTime [not null]
+  amount Float [not null]
+  method String [not null]
+  status String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  invoice Invoice [not null]
+}
+
+Table FinancialReport {
+  id String [pk]
+  reportType String [not null]
+  reportDate DateTime [not null]
+  periodStart DateTime [not null]
+  periodEnd DateTime [not null]
+  totalRevenue Float [not null, default: 0]
+  totalPaid Float [not null, default: 0]
+  totalOutstanding Float [not null, default: 0]
+  totalOverdue Float [not null, default: 0]
+  reportData Json [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+
+  indexes {
+    (reportType, reportDate) [unique]
+  }
+}
+
+Table TaxConfiguration {
+  id String [pk]
+  taxType TaxType [not null]
+  taxName String [not null]
+  taxRate Float [not null]
+  isActive Boolean [not null, default: true]
+  effectiveFrom DateTime [default: `now()`, not null]
+  effectiveTo DateTime
+  isDefault Boolean [not null, default: false]
+  applicableToServices Boolean [not null, default: true]
+  applicableToProducts Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+}
+
+Enum UserRole {
+  ADMIN
+  BIOLOGIST
+  TECHNICIAN
+  SECRETARY
+}
+
+Enum HL7MessageStatus {
+  RECEIVED
+  PROCESSED
+  ERROR
+  PENDING_ACK
+}
+
+Enum DoctorStatus {
+  ACTIVE
+  INACTIVE
+}
+
+Enum RequestStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  VALIDATED
+  CANCELLED
+}
+
+Enum ResultStatus {
+  PENDING
+  VALIDATED
+  REJECTED
+}
+
+Enum OrderStatus {
+  DRAFT
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+Enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+Enum StockStatus {
+  AVAILABLE
+  LOW_STOCK
+  OUT_OF_STOCK
+  EXPIRED
+}
+
+Enum SampleType {
+  BLOOD
+  URINE
+  SALIVA
+  STOOL
+  SPUTUM
+  CEREBROSPINAL_FLUID
+  SYNOVIAL_FLUID
+  PLEURAL_FLUID
+  PERITONEAL_FLUID
+  OTHER
+}
+
+Enum TubeType {
+  EDTA
+  CITRATE
+  HEPARIN
+  SERUM
+  PLAIN
+  FLUORIDE
+  OTHER
+}
+
+Enum ModuleStatus {
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  TRIAL
+}
+
+Enum InvoiceType {
+  STANDARD
+  PROFORMA
+  CREDIT_NOTE
+  DEBIT_NOTE
+  RECEIPT
+}
+
+Enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  PARTIAL_PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+Enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHECK
+  CREDIT_CARD
+  DEBIT_CARD
+  INSURANCE_DIRECT
+}
+
+Enum TransactionType {
+  PAYMENT
+  REFUND
+  ADJUSTMENT
+  DISCOUNT
+  TAX_ADJUSTMENT
+}
+
+Enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+Enum TaxType {
+  TVA
+  STAMP_TAX
+  WITHHOLDING_TAX
+  OTHER
+}
+
+Enum RecurrenceType {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+Enum ClaimStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  PAID
+}
+
+Ref: AuditLog.userId > User.id
+
+Ref: Request.patientId > Patient.id
+
+Ref: Request.doctorId > Doctor.id
+
+Ref: Request.createdById > User.id
+
+Ref: RequestAnalysis.requestId > Request.id [delete: Cascade]
+
+Ref: RequestAnalysis.analysisId > Analysis.id
+
+Ref: Result.requestId > Request.id [delete: Cascade]
+
+Ref: Result.analysisId > Analysis.id
+
+Ref: AnalysisResult.patientId > Patient.id
+
+Ref: StockEntry.productId > Product.id
+
+Ref: StockEntry.supplierId > Supplier.id
+
+Ref: StockOut.productId > Product.id
+
+Ref: StockOut.userId > User.id
+
+Ref: StockTransfer.productId > Product.id
+
+Ref: StockTransfer.userId > User.id
+
+Ref: InventoryAdjustment.productId > Product.id
+
+Ref: InventoryAdjustment.userId > User.id
+
+Ref: Order.supplierId > Supplier.id
+
+Ref: Order.createdBy > User.id
+
+Ref: OrderItem.orderId > Order.id [delete: Cascade]
+
+Ref: OrderItem.productId > Product.id
+
+Ref: AutomateCodeMapping.automateId > Automate.id [delete: Cascade]
+
+Ref: AutomateTransferLog.automateId > Automate.id [delete: Cascade]
+
+Ref: QualityControlResult.automateId > Automate.id [delete: Cascade]
+
+Ref: ModuleLicense.moduleId > Module.id [delete: Cascade]
+
+Ref: Invoice.customerId > Customer.id
+
+Ref: Invoice.requestId > Request.id
+
+Ref: Invoice.patientId > Patient.id
+
+Ref: Invoice.createdById > User.id
+
+Ref: Invoice.parentInvoiceId - Invoice.id
+
+Ref: InvoiceItem.invoiceId > Invoice.id [delete: Cascade]
+
+Ref: InvoiceItem.analysisId > Analysis.id
+
+Ref: InvoiceTax.invoiceId > Invoice.id [delete: Cascade]
+
+Ref: Transaction.invoiceId > Invoice.id
+
+Ref: Transaction.customerId > Customer.id
+
+Ref: Transaction.processedById > User.id
+
+Ref: InsuranceClaim.customerId > Customer.id
+
+Ref: InsuranceClaim.invoiceId > Invoice.id
+
+Ref: InsuranceClaim.createdById > User.id
+
+Ref: PaymentReminder.invoiceId > Invoice.id [delete: Cascade]

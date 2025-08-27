@@ -95,6 +95,8 @@ export const ModuleManager: React.FC<ModuleManagerProps> = ({ children }) => {
       routes.push({ path: '/modules/analytics-pro', component: getModule('analytics-pro')!.routes[0].component });
     }
 
+
+
     return routes;
   };
 
@@ -102,7 +104,7 @@ export const ModuleManager: React.FC<ModuleManagerProps> = ({ children }) => {
   const getActiveMenuItems = () => {
     if (!user) return [];
 
-    return getModuleMenuItems(user.role).filter(item => {
+    const menuItems = getModuleMenuItems(user.role).filter(item => {
       // Check if module is installed and active
       const moduleId = Object.keys(moduleRegistry).find(id => {
         const module = getModule(id);
@@ -113,6 +115,18 @@ export const ModuleManager: React.FC<ModuleManagerProps> = ({ children }) => {
 
       return isModuleAccessible(moduleId, installedModules);
     });
+
+    // Development fallback: Always allow billing-manager menu item for ADMIN and SECRETARY users
+    if ((user.role === 'ADMIN' || user.role === 'SECRETARY') && !menuItems.some(item => item.path === '/modules/billing-manager')) {
+      const billingModule = getModule('billing-manager');
+      if (billingModule && billingModule.menuItems.length > 0) {
+        menuItems.push(...billingModule.menuItems.filter(item => 
+          item.permissions.includes(user.role) || item.permissions.includes('ALL')
+        ));
+      }
+    }
+
+    return menuItems;
   };
 
   // Get active dashboard widgets

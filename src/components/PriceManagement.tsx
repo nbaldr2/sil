@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Save, DollarSign, Plus, Trash2, Search, Filter, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAuth } from '../App';
 import { pricingService } from '../services/integrations';
+import { ConfirmationDialog } from './ui/ConfirmationDialog';
 
 interface AnalysisPrice {
+  id?: string;
   code: string;
   nom: string;
   category: string;
@@ -35,6 +37,17 @@ export default function PriceManagement() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingPrice, setEditingPrice] = useState<AnalysisPrice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Dialog states
+  const [showDialog, setShowDialog] = useState(false);
+  const [dialogType, setDialogType] = useState<'success' | 'danger' | 'warning' | 'info'>('success');
+  const [dialogTitle, setDialogTitle] = useState('');
+  const [dialogMessage, setDialogMessage] = useState('');
+  const [dialogLoading, setDialogLoading] = useState(false);
+  
+  // Delete confirmation dialog
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteCode, setDeleteCode] = useState<string>('');
 
   const t = {
     fr: {
@@ -160,9 +173,16 @@ export default function PriceManagement() {
 
   const categories = ['Hématologie', 'Biochimie', 'Lipides', 'Hormonologie', 'Immunologie', 'Inflammation'];
 
+  const showNotification = (type: 'success' | 'danger' | 'warning' | 'info', title: string, message: string) => {
+    setDialogType(type);
+    setDialogTitle(title);
+    setDialogMessage(message);
+    setShowDialog(true);
+  };
+
   const filteredPrices = analysisPrices.filter(price => {
-    const matchesSearch = price.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         price.code.includes(searchTerm);
+    const matchesSearch = (price.nom && price.nom.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (price.code && price.code.includes(searchTerm));
     const matchesCategory = categoryFilter === 'all' || price.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
@@ -195,21 +215,36 @@ export default function PriceManagement() {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setDialogLoading(true);
     try {
-      pricingService.savePrices(analysisPrices);
+      const success = await pricingService.savePrices(analysisPrices);
       pricingService.saveCurrencySettings(currencySettings);
-      alert(t.success);
+      
+      setDialogLoading(false);
+      
+      if (success) {
+        showNotification('success', t.success, 'Les prix ont été sauvegardés avec succès.');
+      } else {
+        showNotification('danger', t.error, 'Certains prix n\'ont peut-être pas été sauvegardés. Veuillez vérifier la console pour plus de détails.');
+      }
     } catch (error) {
       console.error('Save error:', error);
-      alert(t.error);
+      setDialogLoading(false);
+      showNotification('danger', t.error, 'Une erreur est survenue lors de la sauvegarde.');
     }
   };
 
   const handleDelete = (code: string) => {
-    if (window.confirm(t.confirmDelete)) {
-      setAnalysisPrices(prev => prev.filter(price => price.code !== code));
-    }
+    setDeleteCode(code);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    setAnalysisPrices(prev => prev.filter(price => price.code !== deleteCode));
+    setShowDeleteConfirm(false);
+    setDeleteCode('');
+    showNotification('success', 'Supprimé', 'Le prix a été supprimé avec succès.');
   };
 
   const handleAddPrice = () => {
@@ -599,6 +634,34 @@ export default function PriceManagement() {
           </div>
         </div>
       )}
+
+      {/* Notification Dialog */}
+      <ConfirmationDialog
+        isOpen={showDialog}
+        onClose={() => setShowDialog(false)}
+        onConfirm={() => setShowDialog(false)}
+        title={dialogTitle}
+        message={dialogMessage}
+        type={dialogType}
+        confirmText="OK"
+        // Don't show cancel button for notifications
+        loading={dialogLoading}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setDeleteCode('');
+        }}
+        onConfirm={confirmDelete}
+        title={t.confirmDelete}
+        message={`Êtes-vous sûr de vouloir supprimer le prix pour le code ${deleteCode} ?`}
+        type="danger"
+        confirmText={t.delete}
+        cancelText={t.cancel}
+      />
     </div>
   );
 } 

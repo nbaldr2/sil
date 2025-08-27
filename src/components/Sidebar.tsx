@@ -27,7 +27,8 @@ import {
   Clock,
   Stethoscope,
   Microscope,
-  DatabaseBackup
+  DatabaseBackup,
+  Monitor
 } from 'lucide-react';
 import { useAuth } from '../App';
 import { moduleService, ModuleAccess } from '../services/moduleService';
@@ -54,6 +55,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [stockModuleAccess, setStockModuleAccess] = useState<ModuleAccess | null>(null);
   const [analyticsModuleAccess, setAnalyticsModuleAccess] = useState<ModuleAccess | null>(null);
+  const [billingModuleAccess, setBillingModuleAccess] = useState<ModuleAccess | null>(null);
   const [loadingModules, setLoadingModules] = useState(false);
 
   const t = {
@@ -130,23 +132,40 @@ export default function Sidebar({ onClose }: SidebarProps) {
     const checkModulesAccess = async () => {
       setLoadingModules(true);
       try {
-        const [stockAccess, analyticsAccess] = await Promise.all([
+        const [stockAccess, analyticsAccess, billingAccess] = await Promise.all([
           moduleService.checkModuleAccess('stock-manager'),
-          moduleService.checkModuleAccess('analytics-pro')
+          moduleService.checkModuleAccess('analytics-pro'),
+          moduleService.checkModuleAccess('billing-manager')
         ]);
         setStockModuleAccess(stockAccess);
         setAnalyticsModuleAccess(analyticsAccess);
+        setBillingModuleAccess(billingAccess);
       } catch (error) {
         console.error('Error checking module access:', error);
         if (!stockModuleAccess) setStockModuleAccess({ hasAccess: false, daysRemaining: 0, status: null, expiresAt: null, features: [] });
         if (!analyticsModuleAccess) setAnalyticsModuleAccess({ hasAccess: false, daysRemaining: 0, status: null, expiresAt: null, features: [] });
+        
+        // Development fallback: Allow billing-manager access for ADMIN and SECRETARY users
+        if (!billingModuleAccess) {
+          if (user?.role === 'ADMIN' || user?.role === 'SECRETARY') {
+            setBillingModuleAccess({ 
+              hasAccess: true, 
+              daysRemaining: 999, 
+              status: 'ACTIVE', 
+              expiresAt: new Date(Date.now() + 999 * 24 * 60 * 60 * 1000).toISOString(), 
+              features: ['invoicing', 'payments', 'reporting'] 
+            });
+          } else {
+            setBillingModuleAccess({ hasAccess: false, daysRemaining: 0, status: null, expiresAt: null, features: [] });
+          }
+        }
       } finally {
         setLoadingModules(false);
       }
     };
 
     checkModulesAccess();
-  }, [moduleVersion]); // Refresh when moduleVersion changes
+  }, [moduleVersion, user?.role]); // Refresh when moduleVersion or user role changes
 
   // Create base navigation items
   const baseNavItems: NavItem[] = [
@@ -335,6 +354,38 @@ export default function Sidebar({ onClose }: SidebarProps) {
     roles: ['ADMIN', 'BIOLOGIST']
   } : null;
 
+  // Conditionally add Billing Manager if module is licensed
+  const billingNavItem: NavItem | null = loadingModules ? {
+    id: 'billing-loading',
+    label: (
+      <div className="flex items-center justify-between w-full">
+        <span className="text-gray-400">{t.billing}</span>
+        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400"></div>
+      </div>
+    ),
+    icon: <DollarSign size={20} className="text-gray-400" />,
+    path: '#',
+    roles: ['ADMIN', 'SECRETARY']
+  } : billingModuleAccess?.hasAccess ? {
+    id: 'billing-manager',
+    label: (
+      <div className="flex items-center justify-between w-full">
+        <span>{t.billing}</span>
+        {billingModuleAccess.daysRemaining <= 30 && (
+          <div className="flex items-center space-x-1 text-xs">
+            <Clock size={12} />
+            <span className={billingModuleAccess.daysRemaining <= 7 ? 'text-red-400' : 'text-yellow-400'}>
+              {billingModuleAccess.daysRemaining}d
+            </span>
+          </div>
+        )}
+      </div>
+    ),
+    icon: <DollarSign size={20} />,
+    path: '/modules/billing-manager',
+    roles: ['ADMIN', 'SECRETARY']
+  } : null;
+
   // Combine navigation items
   const navItems: NavItem[] = [
     ...baseNavItems,
@@ -349,13 +400,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
     },
     // Conditionally include Analytics Pro like Stock Manager
     ...(analyticsProNavItem ? [analyticsProNavItem] : []),
-    {
-      id: 'billing',
-      label: t.billing,
-      icon: <DollarSign size={20} />,
-      path: '/billing',
-      roles: ['ADMIN', 'SECRETARY']
-    },
+    // Conditionally include Billing Manager if module is licensed
+    ...(billingNavItem ? [billingNavItem] : []),
     {
       id: 'automates',
       label: t.automates,
@@ -403,6 +449,13 @@ export default function Sidebar({ onClose }: SidebarProps) {
           label: t.systemSettings,
           icon: <Settings size={16} />,
           path: '/config/system',
+          roles: ['ADMIN']
+        },
+        {
+          id: 'server-info',
+          label: 'Server Info',
+          icon: <Monitor size={16} />,
+          path: '/config/server-info',
           roles: ['ADMIN']
         },
        

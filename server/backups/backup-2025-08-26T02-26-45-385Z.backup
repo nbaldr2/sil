@@ -1,0 +1,463 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "createdAt": "2025-08-26T02:26:45.398Z",
+    "description": "SIL Lab Management System Backup"
+  },
+  "data": {
+    "users": [
+      {
+        "id": "cmerubpfa00001r2pov5ceab3",
+        "email": "admin@sil-lab.com",
+        "password": "$2a$10$GNUIdbHZUjbjgZAcMoHr0evE9LBA.89KOxpZA7a7D4h1TeOR/F7OK",
+        "name": "Admin User",
+        "role": "ADMIN",
+        "createdAt": "2025-08-26T01:01:24.214Z",
+        "updatedAt": "2025-08-26T01:01:24.214Z"
+      },
+      {
+        "id": "cmerubphv00011r2p8u0xesis",
+        "email": "biologist@sil-lab.com",
+        "password": "$2a$10$HC4ZhOiegl01MYwjnJwlMOpmS.3jhno77YteH/bkh0miiEf7LuAkW",
+        "name": "Dr. Sarah Johnson",
+        "role": "BIOLOGIST",
+        "createdAt": "2025-08-26T01:01:24.307Z",
+        "updatedAt": "2025-08-26T01:01:24.307Z"
+      },
+      {
+        "id": "cmerubpke00021r2petmce5wc",
+        "email": "tech@sil-lab.com",
+        "password": "$2a$10$.D7GbZmqzacjW/cH.HixmulZfJQhpBJUUdxLymSCWU/Zp1zrJdOLy",
+        "name": "Mike Chen",
+        "role": "TECHNICIAN",
+        "createdAt": "2025-08-26T01:01:24.399Z",
+        "updatedAt": "2025-08-26T01:01:24.399Z"
+      },
+      {
+        "id": "cmerubpmx00031r2phon13zvx",
+        "email": "secretary@sil-lab.com",
+        "password": "$2a$10$UBQG4L6XAT/ZoTdR3.0LXeSfGAWQk0HFSdr43dCDu28rMZ0bFdePe",
+        "name": "Nadia Smith",
+        "role": "SECRETARY",
+        "createdAt": "2025-08-26T01:01:24.490Z",
+        "updatedAt": "2025-08-26T01:01:24.490Z"
+      }
+    ],
+    "patients": [
+      {
+        "id": "cmerubpnb000p1r2phi2aih08",
+        "externalId": null,
+        "firstName": "Soukaina",
+        "lastName": "El Amrani",
+        "dateOfBirth": "1990-05-15T00:00:00.000Z",
+        "gender": "F",
+        "phone": "+212-6-12-345683",
+        "email": "soukaina.elamrani@email.com",
+        "address": null,
+        "cnssNumber": "CNSS-001",
+        "createdAt": "2025-08-26T01:01:24.504Z",
+        "updatedAt": "2025-08-26T01:01:24.504Z"
+      },
+      {
+        "id": "cmerubpnb000q1r2pcj8z6ooe",
+        "externalId": null,
+        "firstName": "Mohammed",
+        "lastName": "Benjelloun",
+        "dateOfBirth": "1985-08-22T00:00:00.000Z",
+        "gender": "M",
+        "phone": "+212-6-12-345684",
+        "email": "mohammed.benjelloun@email.com",
+        "address": null,
+        "cnssNumber": "CNSS-002",
+        "createdAt": "2025-08-26T01:01:24.504Z",
+        "updatedAt": "2025-08-26T01:01:24.504Z"
+      },
+      {
+        "id": "cmerubpnb000r1r2pxqbx1lnd",
+        "externalId": null,
+        "firstName": "Aicha",
+        "lastName": "Lahlou",
+        "dateOfBirth": "1992-12-10T00:00:00.000Z",
+        "gender": "F",
+        "phone": "+212-6-12-345685",
+        "email": "aicha.lahlou@email.com",
+        "address": null,
+        "cnssNumber": "CNSS-003",
+        "createdAt": "2025-08-26T01:01:24.504Z",
+        "updatedAt": "2025-08-26T01:01:24.504Z"
+      },
+      {
+        "id": "cmerubpnb000s1r2pb0tsvm8p",
+        "externalId": null,
+        "firstName": "Youssef",
+        "lastName": "Mansouri",
+        "dateOfBirth": "1988-03-18T00:00:00.000Z",
+        "gender": "M",
+        "phone": "+212-6-12-345686",
+        "email": "youssef.mansouri@email.com",
+        "address": null,
+        "cnssNumber": "CNSS-004",
+        "createdAt": "2025-08-26T01:01:24.504Z",
+        "updatedAt": "2025-08-26T01:01:24.504Z"
+      },
+      {
+        "id": "cmerubpnb000t1r2p9277p5w4",
+        "externalId": null,
+        "firstName": "Leila",
+        "lastName": "Bennani",
+        "dateOfBirth": "1995-07-25T00:00:00.000Z",
+        "gender": "F",
+        "phone": "+212-6-12-345687",
+        "email": "leila.bennani@email.com",
+        "address": null,
+        "cnssNumber": "CNSS-005",
+        "createdAt": "2025-08-26T01:01:24.504Z",
+        "updatedAt": "2025-08-26T01:01:24.504Z"
+      }
+    ],
+    "doctors": [
+      {
+        "id": "cmerubpn8000k1r2pdhm1cihf",
+        "firstName": "Hicham",
+        "lastName": "Boulahcen",
+        "email": "hicham.boulahcen@med.com",
+        "phone": "+212-6-12-345678",
+        "specialty": "Cardiologie",
+        "orderNumber": "ORD-001",
+        "status": "ACTIVE",
+        "createdAt": "2025-08-26T01:01:24.500Z",
+        "updatedAt": "2025-08-26T01:01:24.500Z"
+      },
+      {
+        "id": "cmerubpn8000l1r2pcdzu5913",
+        "firstName": "Fatima",
+        "lastName": "El Amrani",
+        "email": "fatima.elamrani@med.com",
+        "phone": "+212-6-12-345679",
+        "specialty": "Endocrinologie",
+        "orderNumber": "ORD-002",
+        "status": "ACTIVE",
+        "createdAt": "2025-08-26T01:01:24.500Z",
+        "updatedAt": "2025-08-26T01:01:24.500Z"
+      },
+      {
+        "id": "cmerubpn8000m1r2pa9r173ao",
+        "firstName": "Ahmed",
+        "lastName": "Benali",
+        "email": "ahmed.benali@med.com",
+        "phone": "+212-6-12-345680",
+        "specialty": "Gastro-entérologie",
+        "orderNumber": "ORD-003",
+        "status": "ACTIVE",
+        "createdAt": "2025-08-26T01:01:24.500Z",
+        "updatedAt": "2025-08-26T01:01:24.500Z"
+      },
+      {
+        "id": "cmerubpn8000n1r2p0kmttbrm",
+        "firstName": "Amina",
+        "lastName": "Tazi",
+        "email": "amina.tazi@med.com",
+        "phone": "+212-6-12-345681",
+        "specialty": "Dermatologie",
+        "orderNumber": "ORD-004",
+        "status": "ACTIVE",
+        "createdAt": "2025-08-26T01:01:24.500Z",
+        "updatedAt": "2025-08-26T01:01:24.500Z"
+      },
+      {
+        "id": "cmerubpn8000o1r2pwkg0e43y",
+        "firstName": "Karim",
+        "lastName": "Idrissi",
+        "email": "karim.idrissi@med.com",
+        "phone": "+212-6-12-345682",
+        "specialty": "Neurologie",
+        "orderNumber": "ORD-005",
+        "status": "ACTIVE",
+        "createdAt": "2025-08-26T01:01:24.500Z",
+        "updatedAt": "2025-08-26T01:01:24.500Z"
+      }
+    ],
+    "requests": [
+      {
+        "id": "cmerubpno00171r2pj1bd1gxn",
+        "patientId": "cmerubpnb000p1r2phi2aih08",
+        "doctorId": "cmerubpn8000k1r2pdhm1cihf",
+        "status": "COMPLETED",
+        "priority": "NORMAL",
+        "sampleType": "BLOOD",
+        "tubeType": null,
+        "collectionDate": "2024-01-15T00:00:00.000Z",
+        "collectionTime": "10:30",
+        "notes": null,
+        "totalAmount": 100,
+        "discount": 0,
+        "advancePayment": 50,
+        "amountDue": 50,
+        "createdAt": "2025-08-26T01:01:24.516Z",
+        "updatedAt": "2025-08-26T01:01:24.516Z",
+        "createdById": "cmerubpfa00001r2pov5ceab3",
+        "requestAnalyses": [
+          {
+            "id": "cmerubpnq00181r2pjgzz3cme",
+            "requestId": "cmerubpno00171r2pj1bd1gxn",
+            "analysisId": "cmerubpn400051r2p7kl6lqbz",
+            "price": 45,
+            "tva": 0,
+            "analysis": {
+              "id": "cmerubpn400051r2p7kl6lqbz",
+              "code": "4005",
+              "name": "Hémogramme (CBC)",
+              "category": "Hématologie",
+              "price": 45,
+              "tva": 20,
+              "cost": 15,
+              "description": null,
+              "isActive": true,
+              "createdAt": "2025-08-26T01:01:24.496Z",
+              "updatedAt": "2025-08-26T01:01:24.496Z"
+            }
+          },
+          {
+            "id": "cmerubpnq00191r2pxk78o9qq",
+            "requestId": "cmerubpno00171r2pj1bd1gxn",
+            "analysisId": "cmerubpn400061r2pnj76t7ry",
+            "price": 25,
+            "tva": 0,
+            "analysis": {
+              "id": "cmerubpn400061r2pnj76t7ry",
+              "code": "4010",
+              "name": "Glycémie (Blood Sugar)",
+              "category": "Biochimie",
+              "price": 25,
+              "tva": 20,
+              "cost": 8,
+              "description": null,
+              "isActive": true,
+              "createdAt": "2025-08-26T01:01:24.496Z",
+              "updatedAt": "2025-08-26T01:01:24.496Z"
+            }
+          },
+          {
+            "id": "cmerubpnq001a1r2pb9yb9383",
+            "requestId": "cmerubpno00171r2pj1bd1gxn",
+            "analysisId": "cmerubpn400071r2p31pt9ktv",
+            "price": 30,
+            "tva": 0,
+            "analysis": {
+              "id": "cmerubpn400071r2p31pt9ktv",
+              "code": "4015",
+              "name": "Cholestérol Total",
+              "category": "Lipides",
+              "price": 30,
+              "tva": 20,
+              "cost": 10,
+              "description": null,
+              "isActive": true,
+              "createdAt": "2025-08-26T01:01:24.496Z",
+              "updatedAt": "2025-08-26T01:01:24.496Z"
+            }
+          }
+        ]
+      }
+    ],
+    "analyses": [
+      {
+        "id": "cmerubpn400051r2p7kl6lqbz",
+        "code": "4005",
+        "name": "Hémogramme (CBC)",
+        "category": "Hématologie",
+        "price": 45,
+        "tva": 20,
+        "cost": 15,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      },
+      {
+        "id": "cmerubpn400061r2pnj76t7ry",
+        "code": "4010",
+        "name": "Glycémie (Blood Sugar)",
+        "category": "Biochimie",
+        "price": 25,
+        "tva": 20,
+        "cost": 8,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      },
+      {
+        "id": "cmerubpn400071r2p31pt9ktv",
+        "code": "4015",
+        "name": "Cholestérol Total",
+        "category": "Lipides",
+        "price": 30,
+        "tva": 20,
+        "cost": 10,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      },
+      {
+        "id": "cmerubpn400081r2plqjrsyso",
+        "code": "4020",
+        "name": "HDL Cholestérol",
+        "category": "Lipides",
+        "price": 35,
+        "tva": 20,
+        "cost": 12,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      },
+      {
+        "id": "cmerubpn400091r2pkdjvbdno",
+        "code": "4025",
+        "name": "LDL Cholestérol",
+        "category": "Lipides",
+        "price": 35,
+        "tva": 20,
+        "cost": 12,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      },
+      {
+        "id": "cmerubpn4000a1r2pjt0lxf49",
+        "code": "4030",
+        "name": "Triglycérides",
+        "category": "Lipides",
+        "price": 30,
+        "tva": 20,
+        "cost": 10,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      },
+      {
+        "id": "cmerubpn4000b1r2pn888zq3t",
+        "code": "4035",
+        "name": "Créatininémie",
+        "category": "Biochimie",
+        "price": 28,
+        "tva": 20,
+        "cost": 9,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      },
+      {
+        "id": "cmerubpn4000c1r2ph6eme5b7",
+        "code": "4040",
+        "name": "Urée",
+        "category": "Biochimie",
+        "price": 25,
+        "tva": 20,
+        "cost": 8,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      },
+      {
+        "id": "cmerubpn4000d1r2pvsebb4ic",
+        "code": "4045",
+        "name": "Bilan hépatique",
+        "category": "Biochimie",
+        "price": 55,
+        "tva": 20,
+        "cost": 18,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      },
+      {
+        "id": "cmerubpn4000e1r2p02sjube7",
+        "code": "4050",
+        "name": "TSH",
+        "category": "Hormonologie",
+        "price": 40,
+        "tva": 20,
+        "cost": 13,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      },
+      {
+        "id": "cmerubpn4000f1r2p0b3wb6iw",
+        "code": "4055",
+        "name": "T4 Libre",
+        "category": "Hormonologie",
+        "price": 45,
+        "tva": 20,
+        "cost": 15,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      },
+      {
+        "id": "cmerubpn4000g1r2ppxjfd7x9",
+        "code": "4060",
+        "name": "T3 Libre",
+        "category": "Hormonologie",
+        "price": 45,
+        "tva": 20,
+        "cost": 15,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      },
+      {
+        "id": "cmerubpn4000h1r2pczqf1m45",
+        "code": "4070",
+        "name": "Groupe Sanguin",
+        "category": "Immunologie",
+        "price": 35,
+        "tva": 20,
+        "cost": 11,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      },
+      {
+        "id": "cmerubpn4000i1r2pn5f79n4d",
+        "code": "4075",
+        "name": "CRP",
+        "category": "Inflammation",
+        "price": 32,
+        "tva": 20,
+        "cost": 10,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      },
+      {
+        "id": "cmerubpn4000j1r2px4eu1nxn",
+        "code": "4080",
+        "name": "VS",
+        "category": "Inflammation",
+        "price": 20,
+        "tva": 20,
+        "cost": 6,
+        "description": null,
+        "isActive": true,
+        "createdAt": "2025-08-26T01:01:24.496Z",
+        "updatedAt": "2025-08-26T01:01:24.496Z"
+      }
+    ],
+    "results": [],
+    "auditLogs": []
+  }
+}
