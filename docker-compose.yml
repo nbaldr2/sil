@@ -27,7 +27,7 @@ services:
       - sil_network
 
   frontend:
-    build: ./frontend
+    build: ./src
     container_name: sil_frontend
     restart: always
     depends_on:
