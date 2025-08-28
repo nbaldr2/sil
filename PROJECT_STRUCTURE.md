@@ -1,0 +1,44 @@
+# Project Structure
+
+- .github/
+  - workflows/
+- .vscode/
+- .zencoder/
+  - conversation-summaries/
+  - rules/
+- dist/
+  - assets/
+- server/
+  - backups/
+  - dist/
+    - services/
+      - hl7/
+  - logs/
+    - audit/
+  - postman/
+  - prisma/
+    - dbml/
+    - seeds/
+  - scripts/
+  - src/
+    - controllers/
+    - middleware/
+    - routes/
+    - services/
+      - hl7/
+      - hl7xxxx/
+    - utils/
+- src/
+  - api/
+  - components/
+    - admin/
+    - analytics/
+    - automates/
+    - billing/
+    - ui/
+    - wizard/
+  - contexts/
+  - modules/
+    - AnalyticsPro/
+  - services/
+  - utils/
