@@ -1,75 +1,117 @@
-version: '3.9'
+version: '3.8'
 
 services:
+  # PostgreSQL Database
   postgres:
-    image: postgres:15
-    container_name: sil_postgres
-    restart: always
+    image: postgres:15-alpine
+    container_name: sil-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: sil_lab
       POSTGRES_USER: sil_user
       POSTGRES_PASSWORD: sil_password
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
     networks:
-      - sil_network
+      - sil-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sil_user -d sil_lab"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
+  # Backend API
   backend:
-    build: ./server
-    container_name: sil_backend
-    restart: always
-    depends_on:
-      - postgres
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: sil-backend
+    restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgres://sil_user:sil_password@postgres:5432/sil_lab
+      PORT: 5001
+      DATABASE_URL: postgresql://sil_user:sil_password@postgres:5432/sil_lab?schema=public
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: http://152.42.140.159
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: sil_user
+      DB_PASSWORD: sil_password
+      DB_NAME: sil_lab
+    volumes:
+      - backend_logs:/app/logs
+      - backend_backups:/app/backups
+    ports:
+      - "5001:5001"
     networks:
-      - sil_network
+      - sil-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5001/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
+  # Frontend (React + Nginx)
   frontend:
-    build: ./src
-    container_name: sil_frontend
-    restart: always
-    depends_on:
-      - backend
-    networks:
-      - sil_network
-
-  nginx:
-    image: nginx:alpine
-    container_name: sil_nginx
-    restart: always
-    depends_on:
-      - frontend
-      - backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sil-frontend
+    restart: unless-stopped
     ports:
       - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - "443:443"
     networks:
-      - sil_network
+      - sil-network
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
-  # Optional: keep pgAdmin in prod if you want
+  # pgAdmin (Optional - for database management)
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: sil_pgadmin
-    restart: always
-    ports:
-      - "5050:80"
+    container_name: sil-pgadmin
+    restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@sil.lab
+      PGADMIN_DEFAULT_EMAIL: admin@sil-lab.com
       PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
     volumes:
       - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "8080:80"
+    networks:
+      - sil-network
     depends_on:
       - postgres
-    networks:
-      - sil_network
+    profiles:
+      - tools
 
 volumes:
   postgres_data:
+    driver: local
+  backend_logs:
+    driver: local
+  backend_backups:
+    driver: local
   pgadmin_data:
+    driver: local
 
 networks:
-  sil_network:
+  sil-network:
     driver: bridge
