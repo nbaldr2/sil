@@ -1,5 +1,5 @@
 // Backup Service for SIL Lab Management System
-const API_BASE_URL = 'http://localhost:5001/api';
+import { API_BASE_URL } from '../config/api';
 
 export interface BackupData {
   id: string;

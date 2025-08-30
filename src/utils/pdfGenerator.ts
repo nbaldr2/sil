@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { API_BASE_URL } from '../config/api';
 
 export const generatePDFFromElement = async (element: HTMLElement, filename: string): Promise<string> => {
   try {
@@ -79,7 +80,7 @@ export const generateResultPDF = async (
     // Fetch system configuration
     let systemConfig = null;
     try {
-      const configResponse = await fetch('http://localhost:5001/api/config', {
+      const configResponse = await fetch(`${API_BASE_URL}/config`, {
         headers: {
           'Content-Type': 'application/json'
         }

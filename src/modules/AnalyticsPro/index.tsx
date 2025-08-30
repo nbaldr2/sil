@@ -30,6 +30,7 @@ import {
   PredictiveChart,
   KPICard 
 } from '../../components/analytics/ChartComponents';
+import { API_BASE_URL } from '../../config/api';
 
 // Widget component for module store
 const AnalyticsProWidget: React.FC = () => (
@@ -99,8 +100,6 @@ const AnalyticsProPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-
-      const API_BASE_URL = 'http://localhost:5001/api';
       const token = localStorage.getItem('sil_lab_token');
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',

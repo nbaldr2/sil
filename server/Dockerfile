@@ -9,19 +9,24 @@ RUN apk add --no-cache \
     python3 \
     make \
     g++ \
-    postgresql-client
+    postgresql-client \
+    openssl
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies first (needed for Prisma generation)
+RUN npm ci
 
 # Copy Prisma schema first
 COPY prisma ./prisma/
+COPY schema.prod.prisma ./prisma/schema.prisma
 
 # Generate Prisma client
 RUN npx prisma generate
+
+# Remove dev dependencies after Prisma generation
+RUN npm prune --production
 
 # Copy source code
 COPY . .

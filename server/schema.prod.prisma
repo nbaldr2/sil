@@ -1,0 +1,465 @@
+// Production Prisma schema file
+// This version only includes the standard Prisma client generator
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  BIOLOGIST
+  TECHNICIAN
+  SECRETARY
+}
+
+enum HL7MessageStatus {
+  RECEIVED
+  PROCESSED
+  ERROR
+  PENDING_ACK
+}
+
+model HL7Message {
+  id          String          @id @default(cuid())
+  raw         String
+  messageType String
+  sourceIp    String
+  status      HL7MessageStatus
+  error       String?
+  timestamp   DateTime        @default(now())
+  processedAt DateTime?
+}
+
+enum DoctorStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum RequestStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  VALIDATED
+  CANCELLED
+}
+
+enum ResultStatus {
+  PENDING
+  COMPLETED
+  VALIDATED
+  CANCELLED
+}
+
+enum AnalysisStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+  TRANSFER
+  EXPIRED
+  DAMAGED
+}
+
+enum QCStatus {
+  PENDING
+  IN_CONTROL
+  OUT_OF_CONTROL
+  REVIEW_REQUIRED
+}
+
+enum QCResultStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  REVIEW
+}
+
+enum AutomateStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+  ERROR
+}
+
+enum AutomateConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+enum BillingStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  INSURANCE
+  CHECK
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  role      UserRole
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdRequests Request[] @relation("CreatedByUser")
+  validatedResults Result[] @relation("ValidatedByUser")
+  qcResults       QCResult[]
+  auditLogs       AuditLog[]
+  stockMovements  StockMovement[]
+  billingRecords  BillingRecord[] @relation("CreatedByUser")
+  payments        Payment[] @relation("ProcessedByUser")
+
+  @@map("users")
+}
+
+model Doctor {
+  id          String       @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String?      @unique
+  phone       String?
+  specialty   String?
+  address     String?
+  status      DoctorStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  requests Request[]
+
+  @@map("doctors")
+}
+
+model Patient {
+  id          String    @id @default(cuid())
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime?
+  gender      String?
+  phone       String?
+  email       String?
+  address     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  requests Request[]
+
+  @@map("patients")
+}
+
+model Analysis {
+  id          String         @id @default(cuid())
+  name        String
+  code        String         @unique
+  description String?
+  price       Float
+  unit        String?
+  normalRange String?
+  category    String?
+  status      AnalysisStatus @default(ACTIVE)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relations
+  requestAnalyses RequestAnalysis[]
+  results         Result[]
+  qcResults       QCResult[]
+
+  @@map("analyses")
+}
+
+model Request {
+  id          String        @id @default(cuid())
+  patientId   String
+  doctorId    String
+  createdById String
+  status      RequestStatus @default(PENDING)
+  priority    String?       @default("NORMAL")
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  patient   Patient @relation(fields: [patientId], references: [id])
+  doctor    Doctor  @relation(fields: [doctorId], references: [id])
+  createdBy User    @relation("CreatedByUser", fields: [createdById], references: [id])
+
+  requestAnalyses RequestAnalysis[]
+  results         Result[]
+  billingRecords  BillingRecord[]
+
+  @@map("requests")
+}
+
+model RequestAnalysis {
+  id         String @id @default(cuid())
+  requestId  String
+  analysisId String
+
+  // Relations
+  request  Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  analysis Analysis @relation(fields: [analysisId], references: [id])
+
+  @@unique([requestId, analysisId])
+  @@map("request_analyses")
+}
+
+model Result {
+  id           String       @id @default(cuid())
+  requestId    String
+  analysisId   String
+  value        String?
+  unit         String?
+  normalRange  String?
+  status       ResultStatus @default(PENDING)
+  validatedBy  String?
+  validatedAt  DateTime?
+  notes        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Relations
+  request     Request   @relation(fields: [requestId], references: [id])
+  analysis    Analysis  @relation(fields: [analysisId], references: [id])
+  validator   User?     @relation("ValidatedByUser", fields: [validatedBy], references: [id])
+
+  @@unique([requestId, analysisId])
+  @@map("results")
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  code        String    @unique
+  description String?
+  category    String?
+  unit        String
+  minStock    Int       @default(0)
+  maxStock    Int?
+  price       Float?
+  supplierId  String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  supplier       Supplier?       @relation(fields: [supplierId], references: [id])
+  stockMovements StockMovement[]
+  currentStock   Stock?
+
+  @@map("products")
+}
+
+model Supplier {
+  id        String    @id @default(cuid())
+  name      String
+  contact   String?
+  email     String?
+  phone     String?
+  address   String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  products Product[]
+
+  @@map("suppliers")
+}
+
+model Stock {
+  id        String   @id @default(cuid())
+  productId String   @unique
+  quantity  Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("stock")
+}
+
+model StockMovement {
+  id          String            @id @default(cuid())
+  productId   String
+  type        StockMovementType
+  quantity    Int
+  reason      String?
+  reference   String?
+  userId      String
+  createdAt   DateTime          @default(now())
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@map("stock_movements")
+}
+
+model QualityControl {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  automateId  String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  automate  Automate?  @relation(fields: [automateId], references: [id])
+  qcResults QCResult[]
+
+  @@map("quality_controls")
+}
+
+model QCResult {
+  id               String         @id @default(cuid())
+  qualityControlId String
+  analysisId       String
+  expectedValue    String
+  actualValue      String
+  tolerance        String?
+  status           QCStatus       @default(PENDING)
+  resultStatus     QCResultStatus @default(PENDING)
+  userId           String
+  notes            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Relations
+  qualityControl QualityControl @relation(fields: [qualityControlId], references: [id])
+  analysis       Analysis       @relation(fields: [analysisId], references: [id])
+  user           User           @relation(fields: [userId], references: [id])
+
+  @@map("qc_results")
+}
+
+model Automate {
+  id               String                   @id @default(cuid())
+  name             String
+  model            String?
+  manufacturer     String?
+  serialNumber     String?
+  ipAddress        String?
+  port             Int?
+  protocol         String?
+  status           AutomateStatus           @default(ACTIVE)
+  connectionStatus AutomateConnectionStatus @default(DISCONNECTED)
+  lastConnection   DateTime?
+  configuration    Json?
+  isActive         Boolean                  @default(true)
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  // Relations
+  qualityControls QualityControl[]
+
+  @@map("automates")
+}
+
+model BillingRecord {
+  id          String        @id @default(cuid())
+  requestId   String
+  totalAmount Float
+  discount    Float?        @default(0)
+  finalAmount Float
+  status      BillingStatus @default(PENDING)
+  createdById String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  request   Request   @relation(fields: [requestId], references: [id])
+  createdBy User      @relation("CreatedByUser", fields: [createdById], references: [id])
+  payments  Payment[]
+
+  @@map("billing_records")
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  billingRecordId String
+  amount          Float
+  method          PaymentMethod
+  status          PaymentStatus @default(PENDING)
+  reference       String?
+  processedById   String
+  processedAt     DateTime      @default(now())
+  notes           String?
+
+  // Relations
+  billingRecord BillingRecord @relation(fields: [billingRecordId], references: [id])
+  processedBy   User          @relation("ProcessedByUser", fields: [processedById], references: [id])
+
+  @@map("payments")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  resource  String
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  category  String?
+  updatedAt DateTime @updatedAt
+
+  @@map("system_config")
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  version     String
+  description String?
+  isActive    Boolean  @default(false)
+  config      Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("modules")
+}

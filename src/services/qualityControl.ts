@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5001/api';
+import { API_BASE_URL } from '../config/api';
 
 const getAuthHeaders = () => ({
   'Authorization': `Bearer ${localStorage.getItem('sil_lab_token')}`,

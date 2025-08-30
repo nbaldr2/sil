@@ -10,6 +10,7 @@ import {
   Target
 } from 'lucide-react';
 import { LineChart, BarChart, PieChart, KPICard } from './ChartComponents';
+import { API_BASE_URL } from '../../config/api';
 
 interface AnalyticsData {
   testsPerDay: Array<{ date: string; count: number }>;
@@ -27,8 +28,6 @@ const AnalyticsBasic: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('30d');
   const [error, setError] = useState<string | null>(null);
-
-  const API_BASE_URL = 'http://localhost:5001/api';
 
   const fetchAnalyticsData = async () => {
     try {

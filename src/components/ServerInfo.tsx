@@ -26,6 +26,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useAuth } from '../App';
+import { API_BASE_URL } from '../config/api';
 
 interface ServerInfo {
   timestamp: string;
@@ -216,7 +217,8 @@ export default function ServerInfo() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('http://localhost:5001/api/config/server-info');
+
+      const response = await fetch(`${API_BASE_URL}/config/server-info`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

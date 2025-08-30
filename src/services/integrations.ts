@@ -1,5 +1,7 @@
 // API Base URL
-const API_BASE_URL = 'http://localhost:5001/api';
+import { API_BASE_URL } from '../config/api';
+
+// ... existing code ...
 
 // Authentication token management
 let authToken: string | null = localStorage.getItem('sil_lab_token');

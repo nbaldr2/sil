@@ -60,11 +60,7 @@ const limiter = rateLimit({
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    process.env.CORS_ORIGIN
-  ].filter(Boolean),
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(url => url.trim()) : [process.env.FRONTEND_URL || 'http://localhost:5173', 'http://localhost:5174'],
   credentials: true
 }));
 app.use(morgan('combined'));
@@ -88,46 +84,7 @@ const validatePayloadSize = (req, res, next) => {
 };
 
 app.use(validatePayloadSize);
-
-// Swagger Configuration
-const swaggerOptions = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'SIL Lab Management System API',
-      version: '1.0.0',
-      description: 'API Documentation for SIL Lab Management System',
-      contact: {
-        name: 'API Support',
-        email: 'contact@sil-lab.ma'
-      }
-    },
-    servers: [
-      {
-        url: process.env.API_URL || 'http://localhost:5001',
-        description: 'Development Server'
-      }
-    ],
-    components: {
-      ...generateSwaggerComponents(),
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT'
-        }
-      }
-    },
-    security: [{
-      bearerAuth: []
-    }]
-  },
-  apis: ['./src/routes/*.js'] // Path to the API routes
-};
-
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
-
+ 
 // Health Check
 app.get('/api/health', async (req, res) => {
   try {

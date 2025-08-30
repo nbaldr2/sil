@@ -22,6 +22,7 @@ import {
   Info
 } from 'lucide-react';
 import { useAuth } from '../App';
+import { API_BASE_URL } from '../config/api';
 
 interface SystemConfig {
   id?: string;
@@ -295,7 +296,7 @@ export default function SystemSettings() {
   const loadConfig = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5001/api/config', {
+      const response = await fetch(`${API_BASE_URL}/config`, {
         headers: {
           'Content-Type': 'application/json'
         }
@@ -318,7 +319,7 @@ export default function SystemSettings() {
     setSaveStatus('idle');
     
     try {
-      const response = await fetch('http://localhost:5001/api/config', {
+      const response = await fetch(`${API_BASE_URL}/config`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -29,7 +29,9 @@ interface AuditStats {
   };
 }
 
-const API_BASE_URL = 'http://localhost:5001/api';
+import { API_BASE_URL } from '../../config/api';
+
+// ... existing code ...
 
 export const AuditTrail: React.FC = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
